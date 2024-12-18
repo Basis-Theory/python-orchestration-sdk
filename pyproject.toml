@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "payment_orchestration_sdk"
+version = "0.1.0"
+authors = [
+  { name = "Your Name", email = "your.email@example.com" },
+]
+description = "A Python SDK for payment processing"
+readme = "README.md"
+requires-python = ">=3.7"
+dependencies = [
+    "requests>=2.25.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=6.0",
+    "pytest-cov>=2.0",
+]
