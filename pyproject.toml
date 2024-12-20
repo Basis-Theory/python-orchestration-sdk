@@ -1,6 +1,6 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "payment_orchestration_sdk"
@@ -13,6 +13,7 @@ readme = "README.md"
 requires-python = ">=3.7"
 dependencies = [
     "requests>=2.25.0",
+    "basistheory @ git+https://github.com/Basis-Theory/basistheory-python.git",
 ]
 
 [project.optional-dependencies]
