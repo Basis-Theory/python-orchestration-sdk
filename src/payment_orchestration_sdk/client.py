@@ -1,25 +1,51 @@
-from typing import Dict, Any, Optional
-from .config import ProviderConfig, AdyenConfig, CheckoutConfig
-from .exceptions import UninitializedError, ConfigurationError
+from typing import Optional, Dict, Any
+from dataclasses import dataclass
 from .providers.adyen import AdyenClient
+from .exceptions import ConfigurationError
+
+
+@dataclass
+class AdyenConfig:
+    api_key: str
+    merchant_account: str
+
+
+@dataclass
+class CheckoutConfig:
+    private_key: str
+    public_key: str
+    processing_channel: Optional[str] = None
+
+
+@dataclass
+class ProviderConfig:
+    adyen: Optional[AdyenConfig] = None
+    checkout: Optional[CheckoutConfig] = None
+
 
 class PaymentOrchestrationSDK:
     _instance = None
 
     def __init__(self):
         self.is_test: bool = False
+        self.bt_api_key: Optional[str] = None
         self.provider_config: Optional[ProviderConfig] = None
 
     @classmethod
     def init(cls, config: Dict[str, Any]) -> 'PaymentOrchestrationSDK':
-        """Initialize the Payment SDK with the provided configuration."""
+        """Initialize the Payment Orchestration SDK with the provided configuration."""
         if cls._instance is None:
             cls._instance = cls()
 
+        if 'isTest' not in config:
+            raise ConfigurationError("'isTest' parameter is required")
+        if 'btApiKey' not in config:
+            raise ConfigurationError("'btApiKey' parameter is required")
         if 'providerConfig' not in config:
             raise ConfigurationError("'providerConfig' parameter is required")
 
         cls._instance.is_test = config['isTest']
+        cls._instance.bt_api_key = config['btApiKey']
 
         provider_config = config['providerConfig']
 
@@ -50,7 +76,7 @@ class PaymentOrchestrationSDK:
     def get_instance(cls) -> 'PaymentOrchestrationSDK':
         """Get the initialized SDK instance."""
         if cls._instance is None:
-            raise UninitializedError("PaymentSDK must be initialized with init() before use")
+            raise ConfigurationError("PaymentOrchestrationSDK must be initialized with init() before use")
         return cls._instance
 
     @property
@@ -62,5 +88,6 @@ class PaymentOrchestrationSDK:
         return AdyenClient(
             api_key=self.provider_config.adyen.api_key,
             merchant_account=self.provider_config.adyen.merchant_account,
-            is_test=self.is_test
+            is_test=self.is_test,
+            bt_api_key=self.bt_api_key
         )
