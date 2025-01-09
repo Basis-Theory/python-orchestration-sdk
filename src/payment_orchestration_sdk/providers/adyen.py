@@ -1,80 +1,22 @@
-from dataclasses import dataclass
-from enum import Enum
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 import requests
 from ..exceptions import ConfigurationError, APIError, ValidationError
 from ..basis_theory import BasisTheoryClient
+from ..utils import create_transaction_request
+from ..models import (
+    TransactionRequest,
+    Source,
+    SourceType,
+    RecurringType
+)
 
 
-class RecurringType(str, Enum):
-    ECOMMERCE = "ecommerce"
-    CARD_ON_FILE = "card_on_file"
-    SUBSCRIPTION = "subscription"
-    UNSCHEDULED = "unscheduled"
-
-
-class SourceType(str, Enum):
-    BASIS_THEORY_TOKEN = "basis_theory_token"
-    BASIS_THEORY_TOKEN_INTENT = "basistheory_token_intent"
-    PROCESSOR_TOKEN = "processor_token"
-
-
-@dataclass
-class Amount:
-    value: int
-    currency: str = "USD"
-
-
-@dataclass
-class Source:
-    type: SourceType
-    id: str
-    store_with_provider: bool = False
-
-
-@dataclass
-class Address:
-    address_line1: Optional[str] = None
-    address_line2: Optional[str] = None
-    city: Optional[str] = None
-    state: Optional[str] = None
-    zip: Optional[str] = None
-    country: Optional[str] = None
-
-
-@dataclass
-class Customer:
-    reference: Optional[str] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    email: Optional[str] = None
-    address: Optional[Address] = None
-
-
-@dataclass
-class StatementDescription:
-    name: Optional[str] = None
-    city: Optional[str] = None
-
-
-@dataclass
-class ThreeDS:
-    eci: Optional[str] = None
-    authentication_value: Optional[str] = None
-    xid: Optional[str] = None
-    version: Optional[str] = None
-
-
-@dataclass
-class TransactionRequest:
-    amount: Amount
-    source: Source
-    reference: Optional[str] = None
-    merchant_initiated: bool = False
-    type: Optional[RecurringType] = None
-    customer: Optional[Customer] = None
-    statement_description: Optional[StatementDescription] = None
-    three_ds: Optional[ThreeDS] = None
+RECURRING_TYPE_MAPPING = {
+    RecurringType.ECOMMERCE: "ecommerce",
+    RecurringType.CARD_ON_FILE: "card_on_file",
+    RecurringType.SUBSCRIPTION: "subscription",
+    RecurringType.UNSCHEDULED: "unscheduled"
+}
 
 
 class AdyenClient:
@@ -122,6 +64,10 @@ class AdyenClient:
         # Add reference if provided
         if request.reference:
             payload["reference"] = request.reference
+
+        # Add recurring type if provided
+        if request.type:
+            payload["recurringProcessingModel"] = RECURRING_TYPE_MAPPING[request.type]
 
         # Process source based on type
         if request.source.type == SourceType.PROCESSOR_TOKEN:
@@ -202,35 +148,7 @@ class AdyenClient:
             self._validate_required_fields(request_data)
 
             # Convert the dictionary to our internal TransactionRequest model
-            request = TransactionRequest(
-                amount=Amount(
-                    value=request_data['amount']['value'],
-                    currency=request_data['amount'].get('currency', 'USD')
-                ),
-                source=Source(
-                    type=SourceType(request_data['source']['type']),
-                    id=request_data['source']['id'],
-                    store_with_provider=request_data['source'].get('store_with_provider', False)
-                ),
-                reference=request_data.get('reference'),
-                merchant_initiated=request_data.get('merchant_initiated', False),
-                type=RecurringType(request_data['type']) if 'type' in request_data else None,
-                customer=Customer(
-                    reference=request_data.get('customer', {}).get('reference'),
-                    first_name=request_data.get('customer', {}).get('first_name'),
-                    last_name=request_data.get('customer', {}).get('last_name'),
-                    email=request_data.get('customer', {}).get('email'),
-                    address=Address(**request_data['customer']['address'])
-                    if 'customer' in request_data and 'address' in request_data['customer']
-                    else None
-                ) if 'customer' in request_data else None,
-                statement_description=StatementDescription(
-                    **request_data['statement_description']
-                ) if 'statement_description' in request_data else None,
-                three_ds=ThreeDS(
-                    **{k.lower(): v for k, v in request_data['3ds'].items()}
-                ) if '3ds' in request_data else None
-            )
+            request = create_transaction_request(request_data)
 
             # Transform to Adyen's format
             payload = await self._transform_to_adyen_payload(request)
