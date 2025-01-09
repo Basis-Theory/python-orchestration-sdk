@@ -69,6 +69,7 @@ class ThreeDS:
 class TransactionRequest:
     amount: Amount
     source: Source
+    reference: Optional[str] = None
     merchant_initiated: bool = False
     type: Optional[RecurringType] = None
     customer: Optional[Customer] = None
@@ -117,6 +118,10 @@ class AdyenClient:
             "shopperInteraction": "ContAuth" if request.merchant_initiated else "Ecommerce",
             "storePaymentMethod": request.source.store_with_provider,
         }
+
+        # Add reference if provided
+        if request.reference:
+            payload["reference"] = request.reference
 
         # Process source based on type
         if request.source.type == SourceType.PROCESSOR_TOKEN:
@@ -207,6 +212,7 @@ class AdyenClient:
                     id=request_data['source']['id'],
                     store_with_provider=request_data['source'].get('store_with_provider', False)
                 ),
+                reference=request_data.get('reference'),
                 merchant_initiated=request_data.get('merchant_initiated', False),
                 type=RecurringType(request_data['type']) if 'type' in request_data else None,
                 customer=Customer(
