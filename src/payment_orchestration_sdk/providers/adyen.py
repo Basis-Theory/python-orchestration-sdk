@@ -1,7 +1,7 @@
 from typing import Dict, Any
 import requests
 from ..exceptions import ConfigurationError, APIError, ValidationError
-from ..utils import create_transaction_request
+from ..utils import RequestClient, create_transaction_request
 from ..models import (
     TransactionRequest,
     Source,
@@ -23,8 +23,7 @@ class AdyenClient:
         self.api_key = api_key
         self.merchant_account = merchant_account
         self.base_url = "https://checkout-test.adyen.com/v70" if is_test else "https://checkout-live.adyen.com/v70"
-        self.bt_api_key = bt_api_key
-        self.bt_proxy_url = "https://api.basistheory.com/proxy"
+        self.request_client = RequestClient(bt_api_key)
 
     def _validate_required_fields(self, data: Dict[str, Any]) -> None:
         if 'amount' not in data or 'value' not in data['amount']:
@@ -143,29 +142,20 @@ class AdyenClient:
             # Transform to Adyen's format
             payload = await self._transform_to_adyen_payload(request)
 
-            # Determine if we should use BT proxy or direct Adyen call
-            if request.source.type == SourceType.PROCESSOR_TOKEN:
-                # Call Adyen directly for processor tokens
-                response = requests.post(
-                    f"{self.base_url}/payments",
-                    json=payload,
-                    headers={
-                        "X-API-Key": self.api_key,
-                        "Content-Type": "application/json"
-                    }
-                )
-            else:
-                # Use BT proxy for tokenized card data
-                response = requests.post(
-                    self.bt_proxy_url,
-                    json=payload,
-                    headers={
-                        "BT-API-KEY": self.bt_api_key,
-                        "BT-PROXY-URL": f"{self.base_url}/payments",
-                        "Content-Type": "application/json",
-                        "X-API-Key": self.api_key
-                    }
-                )
+            # Set up common headers
+            headers = {
+                "X-API-Key": self.api_key,
+                "Content-Type": "application/json"
+            }
+
+            # Make the request (using proxy for BT tokens, direct for processor tokens)
+            response = self.request_client.request(
+                url=f"{self.base_url}/payments",
+                method="POST",
+                headers=headers,
+                data=payload,
+                use_bt_proxy=request.source.type != SourceType.PROCESSOR_TOKEN
+            )
 
             print(response.json())
             response.raise_for_status()
