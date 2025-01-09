@@ -1,7 +1,6 @@
 from typing import Dict, Any
 import requests
 from ..exceptions import ConfigurationError, APIError, ValidationError
-from ..basis_theory import BasisTheoryClient
 from ..utils import create_transaction_request
 from ..models import (
     TransactionRequest,
@@ -24,30 +23,14 @@ class AdyenClient:
         self.api_key = api_key
         self.merchant_account = merchant_account
         self.base_url = "https://checkout-test.adyen.com/v70" if is_test else "https://checkout-live.adyen.com/v70"
-        self.bt_client = BasisTheoryClient(bt_api_key)
+        self.bt_api_key = bt_api_key
+        self.bt_proxy_url = "https://api.basistheory.com/proxy"
 
     def _validate_required_fields(self, data: Dict[str, Any]) -> None:
         if 'amount' not in data or 'value' not in data['amount']:
             raise ValidationError("amount.value is required")
         if 'source' not in data or 'type' not in data['source'] or 'id' not in data['source']:
             raise ValidationError("source.type and source.id are required")
-
-    async def _process_basis_theory_source(self, source: Source) -> Dict[str, Any]:
-        """
-        Process a Basis Theory source and return Adyen payment method data.
-
-        Args:
-            source: The source configuration containing the token/intent ID
-
-        Returns:
-            Dict containing the Adyen payment method data
-        """
-        if source.type == SourceType.BASIS_THEORY_TOKEN:
-            return await self.bt_client.process_token(source.id)
-        elif source.type == SourceType.BASIS_THEORY_TOKEN_INTENT:
-            return await self.bt_client.process_token_intent(source.id)
-        else:
-            raise ValidationError(f"Unsupported source type: {source.type}")
 
     async def _transform_to_adyen_payload(self, request: TransactionRequest) -> Dict[str, Any]:
         """Transform SDK request to Adyen payload format."""
@@ -76,8 +59,15 @@ class AdyenClient:
                 "storedPaymentMethodId": request.source.id
             }
         elif request.source.type in [SourceType.BASIS_THEORY_TOKEN, SourceType.BASIS_THEORY_TOKEN_INTENT]:
-            payment_method_data = await self._process_basis_theory_source(request.source)
-            payload["paymentMethod"] = payment_method_data
+            # Add card data with Basis Theory expressions
+            token_prefix = "token_intent" if request.source.type == SourceType.BASIS_THEORY_TOKEN_INTENT else "token"
+            payload["paymentMethod"] = {
+                "type": "scheme",
+                "number": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.number'}}}}",
+                "expiryMonth": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.expiration_month'}}}}",
+                "expiryYear": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.expiration_year'}}}}",
+                "cvc": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.cvc'}}}}"
+            }
 
         # Add customer information
         if request.customer:
@@ -143,7 +133,7 @@ class AdyenClient:
         return payload
 
     async def transaction(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Process a payment transaction through Adyen's API."""
+        """Process a payment transaction through Adyen's API directly or via Basis Theory's proxy."""
         try:
             self._validate_required_fields(request_data)
 
@@ -153,14 +143,29 @@ class AdyenClient:
             # Transform to Adyen's format
             payload = await self._transform_to_adyen_payload(request)
 
-            response = requests.post(
-                f"{self.base_url}/payments",
-                json=payload,
-                headers={
-                    "X-API-Key": self.api_key,
-                    "Content-Type": "application/json"
-                }
-            )
+            # Determine if we should use BT proxy or direct Adyen call
+            if request.source.type == SourceType.PROCESSOR_TOKEN:
+                # Call Adyen directly for processor tokens
+                response = requests.post(
+                    f"{self.base_url}/payments",
+                    json=payload,
+                    headers={
+                        "X-API-Key": self.api_key,
+                        "Content-Type": "application/json"
+                    }
+                )
+            else:
+                # Use BT proxy for tokenized card data
+                response = requests.post(
+                    self.bt_proxy_url,
+                    json=payload,
+                    headers={
+                        "BT-API-KEY": self.bt_api_key,
+                        "BT-PROXY-URL": f"{self.base_url}/payments",
+                        "Content-Type": "application/json",
+                        "X-API-Key": self.api_key
+                    }
+                )
 
             print(response.json())
             response.raise_for_status()
@@ -169,4 +174,4 @@ class AdyenClient:
         except KeyError as e:
             raise ValidationError(f"Missing required field: {str(e)}")
         except requests.exceptions.RequestException as e:
-            raise APIError(f"Adyen API request failed: {str(e)}")
+            raise APIError(f"API request failed: {str(e)}")
