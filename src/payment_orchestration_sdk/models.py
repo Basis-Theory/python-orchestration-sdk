@@ -25,7 +25,7 @@ class RecurringType(str, Enum):
 
 class SourceType(str, Enum):
     BASIS_THEORY_TOKEN = "basis_theory_token"
-    BASIS_THEORY_TOKEN_INTENT = "basistheory_token_intent"
+    BASIS_THEORY_TOKEN_INTENT = "basis_theory_token_intent"
     PROCESSOR_TOKEN = "processor_token"
 
 
