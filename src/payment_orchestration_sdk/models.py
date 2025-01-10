@@ -30,9 +30,11 @@ class SourceType(str, Enum):
 
 
 class ErrorCategory(str, Enum):
-    AUTHENTICATION_ERROR = "Authentication Error"
-    PROCESSING_ERROR = "Processing Error"
-    PAYMENT_METHOD_ERROR = "Payment Method Error"
+    AUTHENTICATION_ERROR = "authentication_error"
+    PAYMENT_METHOD_ERROR = "payment_method_error"
+    PROCESSING_ERROR = "processing_error"
+    VALIDATION_ERROR = "validation_error"
+    BASIS_THEORY_ERROR = "basis_theory_error"
     FRAUD_DECLINE = "Fraud Decline"
     OTHER = "Other"
 
@@ -66,6 +68,10 @@ class ErrorType(Enum):
     PROCESSOR_BLOCKED = ("processor_blocked", ErrorCategory.PROCESSING_ERROR)
     INVALID_API_KEY = ("invalid_api_key", ErrorCategory.AUTHENTICATION_ERROR)
     UNAUTHORIZED = ("unauthorized", ErrorCategory.AUTHENTICATION_ERROR)
+    BT_UNAUTHENTICATED = ("unauthenticated", ErrorCategory.BASIS_THEORY_ERROR)
+    BT_UNAUTHORIZED = ("unauthorized", ErrorCategory.BASIS_THEORY_ERROR)
+    BT_REQUEST_ERROR = ("request_error", ErrorCategory.BASIS_THEORY_ERROR)
+    BT_UNEXPECTED = ("unexpected", ErrorCategory.BASIS_THEORY_ERROR)
 
     def __init__(self, code: str, category: ErrorCategory):
         self.code = code

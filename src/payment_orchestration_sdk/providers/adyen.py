@@ -268,48 +268,41 @@ class AdyenClient:
 
     async def transaction(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process a payment transaction through Adyen's API directly or via Basis Theory's proxy."""
+        validate_required_fields(request_data)
+
+        # Convert the dictionary to our internal TransactionRequest model
+        request = create_transaction_request(request_data)
+
+        # Transform to Adyen's format
+        payload = await self._transform_to_adyen_payload(request)
+
+        # Set up common headers
+        headers = {
+            "X-API-Key": self.api_key,
+            "Content-Type": "application/json"
+        }
+
+        # Make the request (using proxy for BT tokens, direct for processor tokens)
         try:
-            validate_required_fields(request_data)
+            response = self.request_client.request(
+                url=f"{self.base_url}/payments",
+                method="POST",
+                headers=headers,
+                data=payload,
+                use_bt_proxy=request.source.type != SourceType.PROCESSOR_TOKEN
+            )
+        except requests.exceptions.HTTPError as e:
+            # Check if this is a BT error
+            if hasattr(e, 'bt_error_response'):
+                return e.bt_error_response
+            # Handle HTTP errors (like 401, 403, etc.)
+            return self._transform_error_response(e.response, e.response.json())
 
-            # Convert the dictionary to our internal TransactionRequest model
-            request = create_transaction_request(request_data)
+        response_data = response.json()
 
-            # Transform to Adyen's format
-            payload = await self._transform_to_adyen_payload(request)
+        # Check if it's an error response (non-200 status code or Adyen error)
+        if not response.ok or response_data.get("resultCode") in ["Refused", "Error", "Cancelled"]:
+            return self._transform_error_response(response, response_data)
 
-            # Set up common headers
-            headers = {
-                "X-API-Key": self.api_key,
-                "Content-Type": "application/json"
-            }
-
-            try:
-                # Make the request (using proxy for BT tokens, direct for processor tokens)
-                try:
-                    response = self.request_client.request(
-                        url=f"{self.base_url}/payments",
-                        method="POST",
-                        headers=headers,
-                        data=payload,
-                        use_bt_proxy=request.source.type != SourceType.PROCESSOR_TOKEN
-                    )
-                except requests.exceptions.HTTPError as e:
-                    # Handle HTTP errors (like 401, 403, etc.)
-                    return self._transform_error_response(e.response, e.response.json())
-
-                response_data = response.json()
-
-                # Check if it's an error response (non-200 status code or Adyen error)
-                if not response.ok or response_data.get("resultCode") in ["Refused", "Error", "Cancelled"]:
-                    return self._transform_error_response(response, response_data)
-
-                # Transform the successful response to our format
-                return await self._transform_adyen_response(response_data, request)
-
-            except Exception as e:
-                raise ProcessingError(f"Error processing transaction: {str(e)}")
-
-        except KeyError as e:
-            raise ValidationError(f"Missing required field: {str(e)}")
-        except Exception as e:
-            raise ProcessingError(f"Error processing transaction: {str(e)}")
+        # Transform the successful response to our format
+        return await self._transform_adyen_response(response_data, request)
