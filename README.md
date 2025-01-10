@@ -11,16 +11,16 @@ The Payment Orchestration SDK is a Python library that simplifies payment proces
 - 3DS authentication support
 - Comprehensive error handling and categorization
 - Type hints and dataclass models for better IDE support
-- [Providers](./providers/index.md) documentation for each provider supported by the SDK.
+- [Providers](./docs/providers/index.md) documentation for each provider supported by the SDK.
 
 ## Documentation
 
-- [Getting Started](./getting-started.md)
-- [Authentication](./authentication.md)
-- [Processing Payments](./processing-payments.md)
-- [Error Handling](./error-handling.md)
-- [API Reference](./api-reference.md)
-- [Providers](./providers/index.md)
+- [Getting Started](./docs/api-reference.md)
+- [Authentication](./docs/authentication.md)
+- [Processing Payments](./docs/processing-payments.md)
+- [Error Handling](./docs/error-handling.md)
+- [API Reference](./docs/api-reference.md)
+- [Providers](./docs/providers/index.md)
 
 ## Installation
 
