@@ -33,7 +33,8 @@ def create_transaction_request(data: Dict[str, Any]) -> TransactionRequest:
         source=Source(
             type=SourceType(data['source']['type']),
             id=data['source']['id'],
-            store_with_provider=data['source'].get('store_with_provider', False)
+            store_with_provider=data['source'].get('store_with_provider', False),
+            holderName=data['source'].get('holderName')
         ),
         reference=data.get('reference'),
         merchant_initiated=data.get('merchant_initiated', False),
