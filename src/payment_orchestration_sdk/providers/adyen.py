@@ -17,7 +17,7 @@ from ..models import (
     ErrorCategory
 )
 from ..exceptions import ValidationError, ProcessingError
-from ..utils.model_utils import create_transaction_request
+from ..utils.model_utils import create_transaction_request, validate_required_fields
 from ..utils.request_client import RequestClient
 
 
@@ -100,12 +100,6 @@ class AdyenClient:
     def _get_status_code(self, adyen_result_code: str) -> TransactionStatusCode:
         """Map Adyen result code to our status code."""
         return STATUS_CODE_MAPPING.get(adyen_result_code, TransactionStatusCode.DECLINED)
-
-    def _validate_required_fields(self, data: Dict[str, Any]) -> None:
-        if 'amount' not in data or 'value' not in data['amount']:
-            raise ValidationError("amount.value is required")
-        if 'source' not in data or 'type' not in data['source'] or 'id' not in data['source']:
-            raise ValidationError("source.type and source.id are required")
 
     async def _transform_to_adyen_payload(self, request: TransactionRequest) -> Dict[str, Any]:
         """Transform SDK request to Adyen payload format."""
@@ -239,10 +233,43 @@ class AdyenClient:
             "created_at": datetime.utcnow().isoformat() + "Z"
         }
 
+    def _transform_error_response(self, response: requests.Response, response_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Transform error responses to our standardized format.
+        
+        Args:
+            response: The HTTP response object
+            response_data: The parsed JSON response data
+            
+        Returns:
+            Dict[str, Any]: Standardized error response
+        """
+        # Map HTTP status codes to error types
+        if response.status_code == 401:
+            error_type = ErrorType.INVALID_API_KEY
+        elif response.status_code == 403:
+            error_type = ErrorType.UNAUTHORIZED
+        # Handle Adyen-specific error codes for declined transactions
+        elif response_data.get("resultCode") in ["Refused", "Error", "Cancelled"]:
+            refusal_code = response_data.get("refusalReasonCode", "")
+            error_type = ERROR_CODE_MAPPING.get(refusal_code, ErrorType.OTHER)
+        else:
+            error_type = ErrorType.OTHER
+
+        return {
+            "error_codes": [
+                {
+                    "category": error_type.category,
+                    "code": error_type.code
+                }
+            ],
+            "provider_errors": [response_data.get("refusalReason") or response_data.get("message", "")],
+            "full_provider_response": response_data
+        }
+
     async def transaction(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process a payment transaction through Adyen's API directly or via Basis Theory's proxy."""
         try:
-            self._validate_required_fields(request_data)
+            validate_required_fields(request_data)
 
             # Convert the dictionary to our internal TransactionRequest model
             request = create_transaction_request(request_data)
@@ -268,66 +295,13 @@ class AdyenClient:
                     )
                 except requests.exceptions.HTTPError as e:
                     # Handle HTTP errors (like 401, 403, etc.)
-                    response = e.response
-                    response_data = response.json()
-
-                    # Map HTTP status codes to error types
-                    if response.status_code == 401:
-                        error_type = ErrorType.INVALID_API_KEY
-                    elif response.status_code == 403:
-                        error_type = ErrorType.UNAUTHORIZED
-                    else:
-                        error_type = ErrorType.OTHER
-
-                    return {
-                        "error_codes": [
-                            {
-                                "category": error_type.category,
-                                "code": error_type.code
-                            }
-                        ],
-                        "provider_errors": [response_data.get("message", "")],
-                        "full_provider_response": response_data
-                    }
+                    return self._transform_error_response(e.response, e.response.json())
 
                 response_data = response.json()
 
-                # Check if it's an error response (non-200 status code)
-                if not response.ok:
-                    # Map HTTP status codes to error types
-                    if response.status_code == 401:
-                        error_type = ErrorType.INVALID_API_KEY
-                    elif response.status_code == 403:
-                        error_type = ErrorType.UNAUTHORIZED
-                    else:
-                        error_type = ErrorType.OTHER
-
-                    return {
-                        "error_codes": [
-                            {
-                                "category": error_type.category,
-                                "code": error_type.code
-                            }
-                        ],
-                        "provider_errors": [response_data.get("message", "")],
-                        "full_provider_response": response_data
-                    }
-
-                # Check if it's an error response (Adyen returns "Refused" for declined transactions)
-                if response_data.get("resultCode") in ["Refused", "Error", "Cancelled"]:
-                    refusal_code = response_data.get("refusalReasonCode", "")
-                    error_type = ERROR_CODE_MAPPING.get(refusal_code, ErrorType.OTHER)
-
-                    return {
-                        "error_codes": [
-                            {
-                                "category": error_type.category,
-                                "code": error_type.code
-                            }
-                        ],
-                        "provider_errors": [response_data.get("refusalReason", "")],
-                        "full_provider_response": response_data
-                    }
+                # Check if it's an error response (non-200 status code or Adyen error)
+                if not response.ok or response_data.get("resultCode") in ["Refused", "Error", "Cancelled"]:
+                    return self._transform_error_response(response, response_data)
 
                 # Transform the successful response to our format
                 return await self._transform_adyen_response(response_data, request)

@@ -10,6 +10,23 @@ from ..models import (
     ThreeDS,
     RecurringType
 )
+from ..exceptions import ValidationError
+
+
+def validate_required_fields(data: Dict[str, Any]) -> None:
+    """
+    Validate required fields in a transaction request.
+    
+    Args:
+        data: Dictionary containing transaction request data
+        
+    Raises:
+        ValidationError: If required fields are missing
+    """
+    if 'amount' not in data or 'value' not in data['amount']:
+        raise ValidationError("amount.value is required")
+    if 'source' not in data or 'type' not in data['source'] or 'id' not in data['source']:
+        raise ValidationError("source.type and source.id are required")
 
 
 def create_transaction_request(data: Dict[str, Any]) -> TransactionRequest:
