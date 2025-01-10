@@ -6,14 +6,18 @@ class UninitializedError(PaymentOrchestrationError):
     """Raised when SDK is used before initialization"""
     pass
 
-class ValidationError(PaymentOrchestrationError):
-    """Raised when request validation fails"""
+class ValidationError(Exception):
+    """Raised when request validation fails."""
     pass
 
-class ConfigurationError(PaymentOrchestrationError):
-    """Raised when SDK is configured incorrectly"""
+class ConfigurationError(Exception):
+    """Raised when SDK configuration is invalid."""
     pass
 
-class APIError(PaymentOrchestrationError):
-    """Raised when API request fails"""
+class APIError(Exception):
+    """Raised when an API request fails."""
+    pass
+
+class ProcessingError(Exception):
+    """Raised when transaction processing fails."""
     pass

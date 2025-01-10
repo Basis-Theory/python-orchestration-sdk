@@ -1,110 +1,105 @@
-from dataclasses import dataclass
-from enum import Enum
-from typing import Optional, Dict, Any
+from typing import Dict, Any, Tuple, Optional
+from datetime import datetime
 import requests
-from ..exceptions import ConfigurationError, APIError, ValidationError
-from ..basis_theory import BasisTheoryClient
+
+from ..models import (
+    TransactionRequest,
+    Amount,
+    Source,
+    SourceType,
+    Customer,
+    Address,
+    StatementDescription,
+    ThreeDS,
+    RecurringType,
+    TransactionStatusCode,
+    ErrorType,
+    ErrorCategory
+)
+from ..exceptions import ValidationError, ProcessingError
+from ..utils.model_utils import create_transaction_request, validate_required_fields
+from ..utils.request_client import RequestClient
 
 
-class RecurringType(str, Enum):
-    ECOMMERCE = "ecommerce"
-    CARD_ON_FILE = "card_on_file"
-    SUBSCRIPTION = "subscription"
-    UNSCHEDULED = "unscheduled"
+RECURRING_TYPE_MAPPING = {
+    RecurringType.ONE_TIME: None,
+    RecurringType.CARD_ON_FILE: "CardOnFile",
+    RecurringType.SUBSCRIPTION: "Subscription",
+    RecurringType.UNSCHEDULED: "UnscheduledCardOnFile"
+}
 
 
-class SourceType(str, Enum):
-    BASIS_THEORY_TOKEN = "basis_theory_token"
-    BASIS_THEORY_TOKEN_INTENT = "basistheory_token_intent"
-    PROCESSOR_TOKEN = "processor_token"
+# Map Adyen resultCode to our status codes
+STATUS_CODE_MAPPING = {
+    "Authorised": TransactionStatusCode.AUTHORIZED,         # Adyen: Authorised - Payment was successfully authorized
+    "Pending": TransactionStatusCode.PENDING,              # Adyen: Pending - Payment is pending, waiting for completion
+    "Error": TransactionStatusCode.DECLINED,               # Adyen: Error - Technical error occurred
+    "Refused": TransactionStatusCode.DECLINED,             # Adyen: Refused - Payment was refused
+    "Cancelled": TransactionStatusCode.CANCELLED,          # Adyen: Cancelled - Payment was cancelled
+    "ChallengeShopper": TransactionStatusCode.CHALLENGE_SHOPPER,  # Adyen: ChallengeShopper - 3DS2 challenge required
+    "Received": TransactionStatusCode.RECEIVED,            # Adyen: Received - Payment was received
+    "PartiallyAuthorised": TransactionStatusCode.PARTIALLY_AUTHORIZED  # Adyen: PartiallyAuthorised - Only part of the amount was authorized
+}
 
 
-@dataclass
-class Amount:
-    value: int
-    currency: str = "USD"
-
-
-@dataclass
-class Source:
-    type: SourceType
-    id: str
-    store_with_provider: bool = False
-
-
-@dataclass
-class Address:
-    address_line1: Optional[str] = None
-    address_line2: Optional[str] = None
-    city: Optional[str] = None
-    state: Optional[str] = None
-    zip: Optional[str] = None
-    country: Optional[str] = None
-
-
-@dataclass
-class Customer:
-    reference: Optional[str] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    email: Optional[str] = None
-    address: Optional[Address] = None
-
-
-@dataclass
-class StatementDescription:
-    name: Optional[str] = None
-    city: Optional[str] = None
-
-
-@dataclass
-class ThreeDS:
-    eci: Optional[str] = None
-    authentication_value: Optional[str] = None
-    xid: Optional[str] = None
-    version: Optional[str] = None
-
-
-@dataclass
-class TransactionRequest:
-    amount: Amount
-    source: Source
-    merchant_initiated: bool = False
-    type: Optional[RecurringType] = None
-    customer: Optional[Customer] = None
-    statement_description: Optional[StatementDescription] = None
-    three_ds: Optional[ThreeDS] = None
+# Mapping of Adyen refusal reason codes to our error types
+ERROR_CODE_MAPPING = {
+    "2": ErrorType.REFUSED,  # Refused
+    "3": ErrorType.REFERRAL,  # Referral
+    "4": ErrorType.ACQUIRER_ERROR,  # Acquirer Error
+    "5": ErrorType.BLOCKED_CARD,  # Blocked Card
+    "6": ErrorType.EXPIRED_CARD,  # Expired Card
+    "7": ErrorType.INVALID_AMOUNT,  # Invalid Amount
+    "8": ErrorType.INVALID_CARD,  # Invalid Card Number
+    "9": ErrorType.OTHER,  # Issuer Unavailable
+    "10": ErrorType.NOT_SUPPORTED,  # Not supported
+    "11": ErrorType.AUTHENTICATION_FAILURE,  # 3D Not Authenticated
+    "12": ErrorType.INSUFFICENT_FUNDS,  # Not enough balance
+    "14": ErrorType.FRAUD,  # Acquirer Fraud
+    "15": ErrorType.PAYMENT_CANCELLED,  # Cancelled
+    "16": ErrorType.PAYMENT_CANCELLED_BY_CONSUMER,  # Shopper Cancelled
+    "17": ErrorType.INVALID_PIN,  # Invalid Pin
+    "18": ErrorType.PIN_TRIES_EXCEEDED,  # Pin tries exceeded
+    "19": ErrorType.OTHER,  # Pin validation not possible
+    "20": ErrorType.FRAUD,  # FRAUD
+    "21": ErrorType.OTHER,  # Not Submitted
+    "22": ErrorType.FRAUD,  # FRAUD-CANCELLED
+    "23": ErrorType.NOT_SUPPORTED,  # Transaction Not Permitted
+    "24": ErrorType.CVC_INVALID,  # CVC Declined
+    "25": ErrorType.RESTRICTED_CARD,  # Restricted Card
+    "26": ErrorType.STOP_PAYMENT,  # Revocation Of Auth
+    "27": ErrorType.OTHER,  # Declined Non Generic
+    "28": ErrorType.INSUFFICENT_FUNDS,  # Withdrawal amount exceeded
+    "29": ErrorType.INSUFFICENT_FUNDS,  # Withdrawal count exceeded
+    "31": ErrorType.FRAUD,  # Issuer Suspected Fraud
+    "32": ErrorType.AVS_DECLINE,  # AVS Declined
+    "33": ErrorType.PIN_REQUIRED,  # Card requires online pin
+    "34": ErrorType.BANK_ERROR,  # No checking account available on Card
+    "35": ErrorType.BANK_ERROR,  # No savings account available on Card
+    "36": ErrorType.PIN_REQUIRED,  # Mobile pin required
+    "37": ErrorType.CONTACTLESS_FALLBACK,  # Contactless fallback
+    "38": ErrorType.AUTHENTICATION_REQUIRED,  # Authentication required
+    "39": ErrorType.AUTHENTICATION_FAILURE,  # RReq not received from DS
+    "40": ErrorType.OTHER,  # Current AID is in Penalty Box
+    "41": ErrorType.PIN_REQUIRED,  # CVM Required Restart Payment
+    "42": ErrorType.AUTHENTICATION_FAILURE,  # 3DS Authentication Error
+    "43": ErrorType.PIN_REQUIRED,  # Online PIN required
+    "44": ErrorType.OTHER,  # Try another interface
+    "45": ErrorType.OTHER,  # Chip downgrade mode
+    "46": ErrorType.PROCESSOR_BLOCKED,  # Transaction blocked by Adyen to prevent excessive retry fees
+}
 
 
 class AdyenClient:
     def __init__(self, api_key: str, merchant_account: str, is_test: bool, bt_api_key: str):
         self.api_key = api_key
         self.merchant_account = merchant_account
-        self.base_url = "https://checkout-test.adyen.com/v70" if is_test else "https://checkout-live.adyen.com/v70"
-        self.bt_client = BasisTheoryClient(bt_api_key)
+        self.base_url = "https://checkout-test.adyen.com/v71" if is_test else "https://checkout-live.adyen.com/v71"
+        self.request_client = RequestClient(bt_api_key)
 
-    def _validate_required_fields(self, data: Dict[str, Any]) -> None:
-        if 'amount' not in data or 'value' not in data['amount']:
-            raise ValidationError("amount.value is required")
-        if 'source' not in data or 'type' not in data['source'] or 'id' not in data['source']:
-            raise ValidationError("source.type and source.id are required")
-
-    async def _process_basis_theory_source(self, source: Source) -> Dict[str, Any]:
-        """
-        Process a Basis Theory source and return Adyen payment method data.
-
-        Args:
-            source: The source configuration containing the token/intent ID
-
-        Returns:
-            Dict containing the Adyen payment method data
-        """
-        if source.type == SourceType.BASIS_THEORY_TOKEN:
-            return await self.bt_client.process_token(source.id)
-        elif source.type == SourceType.BASIS_THEORY_TOKEN_INTENT:
-            return await self.bt_client.process_token_intent(source.id)
-        else:
-            raise ValidationError(f"Unsupported source type: {source.type}")
+    def _get_status_code(self, adyen_result_code: str) -> TransactionStatusCode:
+        """Map Adyen result code to our status code."""
+        return STATUS_CODE_MAPPING.get(adyen_result_code, TransactionStatusCode.DECLINED)
 
     async def _transform_to_adyen_payload(self, request: TransactionRequest) -> Dict[str, Any]:
         """Transform SDK request to Adyen payload format."""
@@ -118,15 +113,34 @@ class AdyenClient:
             "storePaymentMethod": request.source.store_with_provider,
         }
 
+        # Add reference if provided
+        if request.reference:
+            payload["reference"] = request.reference
+
+        # Add recurring type if provided
+        if request.type:
+            payload["recurringProcessingModel"] = RECURRING_TYPE_MAPPING[request.type]
+
         # Process source based on type
         if request.source.type == SourceType.PROCESSOR_TOKEN:
             payload["paymentMethod"] = {
                 "type": "scheme",
                 "storedPaymentMethodId": request.source.id
             }
+            if request.source.holderName:
+                payload["paymentMethod"]["holderName"] = request.source.holderName
         elif request.source.type in [SourceType.BASIS_THEORY_TOKEN, SourceType.BASIS_THEORY_TOKEN_INTENT]:
-            payment_method_data = await self._process_basis_theory_source(request.source)
-            payload["paymentMethod"] = payment_method_data
+            # Add card data with Basis Theory expressions
+            token_prefix = "token_intent" if request.source.type == SourceType.BASIS_THEORY_TOKEN_INTENT else "token"
+            payload["paymentMethod"] = {
+                "type": "scheme",
+                "number": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.number'}}}}",
+                "expiryMonth": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.expiration_month'}}}}",
+                "expiryYear": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.expiration_year'}}}}",
+                "cvc": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.cvc'}}}}"
+            }
+            if request.source.holderName:
+                payload["paymentMethod"]["holderName"] = request.source.holderName
 
         # Add customer information
         if request.customer:
@@ -191,58 +205,104 @@ class AdyenClient:
 
         return payload
 
-    async def transaction(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Process a payment transaction through Adyen's API."""
-        try:
-            self._validate_required_fields(request_data)
+    async def _transform_adyen_response(self, response_data: Dict[str, Any], request: TransactionRequest) -> Dict[str, Any]:
+        """Transform Adyen response to our standardized format."""
+        return {
+            "id": response_data["pspReference"],
+            "reference": response_data["merchantReference"],
+            "amount": {
+                "value": response_data["amount"]["value"],
+                "currency": response_data["amount"]["currency"]
+            },
+            "status": {
+                "code": self._get_status_code(response_data["resultCode"]),
+                "provider_code": response_data["resultCode"]
+            },
+            "source": {
+                "type": request.source.type,
+                "id": request.source.id,
+                # checking both as recurringDetailReference is deprecated, although it still appears without storedPaymentMethodId
+                "provisioned": {
+                    "id": response_data.get("paymentMethod", {}).get("storedPaymentMethodId", "") or 
+                         response_data.get("additionalData", {}).get("recurring.recurringDetailReference", "")
+                } if (response_data.get("paymentMethod", {}).get("storedPaymentMethodId") or 
+                      response_data.get("additionalData", {}).get("recurring.recurringDetailReference")) else None
+            },
+            "networkTransactionId": response_data.get("additionalData", {}).get("networkTxReference"),
+            "full_provider_response": response_data,
+            "created_at": datetime.utcnow().isoformat() + "Z"
+        }
 
-            # Convert the dictionary to our internal TransactionRequest model
-            request = TransactionRequest(
-                amount=Amount(
-                    value=request_data['amount']['value'],
-                    currency=request_data['amount'].get('currency', 'USD')
-                ),
-                source=Source(
-                    type=SourceType(request_data['source']['type']),
-                    id=request_data['source']['id'],
-                    store_with_provider=request_data['source'].get('store_with_provider', False)
-                ),
-                merchant_initiated=request_data.get('merchant_initiated', False),
-                type=RecurringType(request_data['type']) if 'type' in request_data else None,
-                customer=Customer(
-                    reference=request_data.get('customer', {}).get('reference'),
-                    first_name=request_data.get('customer', {}).get('first_name'),
-                    last_name=request_data.get('customer', {}).get('last_name'),
-                    email=request_data.get('customer', {}).get('email'),
-                    address=Address(**request_data['customer']['address'])
-                    if 'customer' in request_data and 'address' in request_data['customer']
-                    else None
-                ) if 'customer' in request_data else None,
-                statement_description=StatementDescription(
-                    **request_data['statement_description']
-                ) if 'statement_description' in request_data else None,
-                three_ds=ThreeDS(
-                    **{k.lower(): v for k, v in request_data['3ds'].items()}
-                ) if '3ds' in request_data else None
-            )
+    def _transform_error_response(self, response: requests.Response, response_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Transform error responses to our standardized format.
+        
+        Args:
+            response: The HTTP response object
+            response_data: The parsed JSON response data
+            
+        Returns:
+            Dict[str, Any]: Standardized error response
+        """
+        # Map HTTP status codes to error types
+        if response.status_code == 401:
+            error_type = ErrorType.INVALID_API_KEY
+        elif response.status_code == 403:
+            error_type = ErrorType.UNAUTHORIZED
+        # Handle Adyen-specific error codes for declined transactions
+        elif response_data.get("resultCode") in ["Refused", "Error", "Cancelled"]:
+            refusal_code = response_data.get("refusalReasonCode", "")
+            error_type = ERROR_CODE_MAPPING.get(refusal_code, ErrorType.OTHER)
+        else:
+            error_type = ErrorType.OTHER
 
-            # Transform to Adyen's format
-            payload = await self._transform_to_adyen_payload(request)
-
-            response = requests.post(
-                f"{self.base_url}/payments",
-                json=payload,
-                headers={
-                    "X-API-Key": self.api_key,
-                    "Content-Type": "application/json"
+        return {
+            "error_codes": [
+                {
+                    "category": error_type.category,
+                    "code": error_type.code
                 }
+            ],
+            "provider_errors": [response_data.get("refusalReason") or response_data.get("message", "")],
+            "full_provider_response": response_data
+        }
+
+    async def transaction(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Process a payment transaction through Adyen's API directly or via Basis Theory's proxy."""
+        validate_required_fields(request_data)
+
+        # Convert the dictionary to our internal TransactionRequest model
+        request = create_transaction_request(request_data)
+
+        # Transform to Adyen's format
+        payload = await self._transform_to_adyen_payload(request)
+
+        # Set up common headers
+        headers = {
+            "X-API-Key": self.api_key,
+            "Content-Type": "application/json"
+        }
+
+        # Make the request (using proxy for BT tokens, direct for processor tokens)
+        try:
+            response = self.request_client.request(
+                url=f"{self.base_url}/payments",
+                method="POST",
+                headers=headers,
+                data=payload,
+                use_bt_proxy=request.source.type != SourceType.PROCESSOR_TOKEN
             )
+        except requests.exceptions.HTTPError as e:
+            # Check if this is a BT error
+            if hasattr(e, 'bt_error_response'):
+                return e.bt_error_response
+            # Handle HTTP errors (like 401, 403, etc.)
+            return self._transform_error_response(e.response, e.response.json())
 
-            print(response.json())
-            response.raise_for_status()
-            return response.json()
+        response_data = response.json()
 
-        except KeyError as e:
-            raise ValidationError(f"Missing required field: {str(e)}")
-        except requests.exceptions.RequestException as e:
-            raise APIError(f"Adyen API request failed: {str(e)}")
+        # Check if it's an error response (non-200 status code or Adyen error)
+        if not response.ok or response_data.get("resultCode") in ["Refused", "Error", "Cancelled"]:
+            return self._transform_error_response(response, response_data)
+
+        # Transform the successful response to our format
+        return await self._transform_adyen_response(response_data, request)
