@@ -313,7 +313,7 @@ async def test_error_expired_card():
     # Verify exact error code values
     error = response['error_codes'][0]
     assert error['category'] == ErrorCategory.PAYMENT_METHOD_ERROR
-    assert error['code'] == ErrorType.EXPIRED_CARD
+    assert error['code'] == ErrorType.EXPIRED_CARD.code
     
     # Verify provider errors
     assert 'provider_errors' in response
@@ -376,7 +376,7 @@ async def test_error_invalid_api_key():
     # Verify exact error code values
     error = response['error_codes'][0]
     assert error['category'] == ErrorCategory.AUTHENTICATION_ERROR
-    assert error['code'] == ErrorType.INVALID_API_KEY
+    assert error['code'] == ErrorType.INVALID_API_KEY.code
     
     # Verify provider errors
     assert 'provider_errors' in response

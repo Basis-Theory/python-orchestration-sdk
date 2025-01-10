@@ -185,8 +185,8 @@ async def test_invalid_api_key_error():
         # Verify error response structure
         assert "error_codes" in response
         assert len(response["error_codes"]) == 1
-        assert response["error_codes"][0]["code"] == ErrorType.INVALID_API_KEY
-        assert response["error_codes"][0]["category"] == ErrorCategory.AUTHENTICATION_ERROR
+        assert response["error_codes"][0]["code"] == ErrorType.INVALID_API_KEY.code
+        assert response["error_codes"][0]["category"] == ErrorType.INVALID_API_KEY.category
         assert response["provider_errors"] == ["Invalid API key"]
         assert response["full_provider_response"] == mock_response_data
 
@@ -252,8 +252,8 @@ async def test_unauthorized_error():
         # Verify error response structure
         assert "error_codes" in response
         assert len(response["error_codes"]) == 1
-        assert response["error_codes"][0]["code"] == ErrorType.UNAUTHORIZED
-        assert response["error_codes"][0]["category"] == ErrorCategory.AUTHENTICATION_ERROR
+        assert response["error_codes"][0]["code"] == ErrorType.UNAUTHORIZED.code
+        assert response["error_codes"][0]["category"] == ErrorType.UNAUTHORIZED.category
         assert response["provider_errors"] == ["Access Not Allowed"]
         assert response["full_provider_response"] == mock_response_data
 
@@ -261,53 +261,53 @@ async def test_unauthorized_error():
 async def test_errors():
     # Define test cases mapping
     test_cases = [
-        {"holderName": "UNKNOWN", "resultCode": "Error", "refusalReason": "Unknown", "refusalReasonCode": "0", "expected_error": (ErrorType.OTHER, ErrorCategory.OTHER)},
+        {"holderName": "UNKNOWN", "resultCode": "Error", "refusalReason": "Unknown", "refusalReasonCode": "0", "expected_error": ErrorType.OTHER},
         {"holderName": "APPROVED", "resultCode": "Authorised", "refusalReason": None, "refusalReasonCode": "1", "expected_error": None},
-        {"holderName": "DECLINED", "resultCode": "Refused", "refusalReason": "Refused", "refusalReasonCode": "2", "expected_error": (ErrorType.REFUSED, ErrorCategory.PROCESSING_ERROR)},
-        {"holderName": "REFERRAL", "resultCode": "Refused", "refusalReason": "Referral", "refusalReasonCode": "3", "expected_error": (ErrorType.REFERRAL, ErrorCategory.PROCESSING_ERROR)},
-        {"holderName": "ERROR", "resultCode": "Error", "refusalReason": "Acquirer Error", "refusalReasonCode": "4", "expected_error": (ErrorType.ACQUIRER_ERROR, ErrorCategory.OTHER)},
-        {"holderName": "BLOCK_CARD", "resultCode": "Refused", "refusalReason": "Blocked Card", "refusalReasonCode": "5", "expected_error": (ErrorType.BLOCKED_CARD, ErrorCategory.PAYMENT_METHOD_ERROR)},
-        {"holderName": "CARD_EXPIRED", "resultCode": "Refused", "refusalReason": "Expired Card", "refusalReasonCode": "6", "expected_error": (ErrorType.EXPIRED_CARD, ErrorCategory.PAYMENT_METHOD_ERROR)},
-        {"holderName": "INVALID_AMOUNT", "resultCode": "Refused", "refusalReason": "Invalid Amount", "refusalReasonCode": "7", "expected_error": (ErrorType.INVALID_AMOUNT, ErrorCategory.OTHER)},
-        {"holderName": "INVALID_CARD_NUMBER", "resultCode": "Refused", "refusalReason": "Invalid Card Number", "refusalReasonCode": "8", "expected_error": (ErrorType.INVALID_CARD, ErrorCategory.PAYMENT_METHOD_ERROR)},
-        {"holderName": "ISSUER_UNAVAILABLE", "resultCode": "Refused", "refusalReason": "Issuer Unavailable", "refusalReasonCode": "9", "expected_error": (ErrorType.OTHER, ErrorCategory.OTHER)},
-        {"holderName": "NOT_SUPPORTED", "resultCode": "Refused", "refusalReason": "Not supported", "refusalReasonCode": "10", "expected_error": (ErrorType.NOT_SUPPORTED, ErrorCategory.PROCESSING_ERROR)},
-        {"holderName": "NOT_3D_AUTHENTICATED", "resultCode": "Refused", "refusalReason": "3D Not Authenticated", "refusalReasonCode": "11", "expected_error": (ErrorType.AUTHENTICATION_FAILURE, ErrorCategory.PAYMENT_METHOD_ERROR)},
-        {"holderName": "NOT_ENOUGH_BALANCE", "resultCode": "Refused", "refusalReason": "Not enough balance", "refusalReasonCode": "12", "expected_error": (ErrorType.INSUFFICENT_FUNDS, ErrorCategory.PAYMENT_METHOD_ERROR)},
+        {"holderName": "DECLINED", "resultCode": "Refused", "refusalReason": "Refused", "refusalReasonCode": "2", "expected_error": ErrorType.REFUSED},
+        {"holderName": "REFERRAL", "resultCode": "Refused", "refusalReason": "Referral", "refusalReasonCode": "3", "expected_error": ErrorType.REFERRAL},
+        {"holderName": "ERROR", "resultCode": "Error", "refusalReason": "Acquirer Error", "refusalReasonCode": "4", "expected_error": ErrorType.ACQUIRER_ERROR},
+        {"holderName": "BLOCK_CARD", "resultCode": "Refused", "refusalReason": "Blocked Card", "refusalReasonCode": "5", "expected_error": ErrorType.BLOCKED_CARD},
+        {"holderName": "CARD_EXPIRED", "resultCode": "Refused", "refusalReason": "Expired Card", "refusalReasonCode": "6", "expected_error": ErrorType.EXPIRED_CARD},
+        {"holderName": "INVALID_AMOUNT", "resultCode": "Refused", "refusalReason": "Invalid Amount", "refusalReasonCode": "7", "expected_error": ErrorType.INVALID_AMOUNT},
+        {"holderName": "INVALID_CARD_NUMBER", "resultCode": "Refused", "refusalReason": "Invalid Card Number", "refusalReasonCode": "8", "expected_error": ErrorType.INVALID_CARD},
+        {"holderName": "ISSUER_UNAVAILABLE", "resultCode": "Refused", "refusalReason": "Issuer Unavailable", "refusalReasonCode": "9", "expected_error": ErrorType.OTHER},
+        {"holderName": "NOT_SUPPORTED", "resultCode": "Refused", "refusalReason": "Not supported", "refusalReasonCode": "10", "expected_error": ErrorType.NOT_SUPPORTED},
+        {"holderName": "NOT_3D_AUTHENTICATED", "resultCode": "Refused", "refusalReason": "3D Not Authenticated", "refusalReasonCode": "11", "expected_error": ErrorType.AUTHENTICATION_FAILURE},
+        {"holderName": "NOT_ENOUGH_BALANCE", "resultCode": "Refused", "refusalReason": "Not enough balance", "refusalReasonCode": "12", "expected_error": ErrorType.INSUFFICENT_FUNDS},
         {"holderName": "PENDING", "resultCode": "Received", "refusalReason": None, "refusalReasonCode": "13", "expected_error": None},
-        {"holderName": "ACQUIRER_FRAUD", "resultCode": "Refused", "refusalReason": "Acquirer Fraud", "refusalReasonCode": "14", "expected_error": (ErrorType.FRAUD, ErrorCategory.FRAUD_DECLINE)},
-        {"holderName": "CANCELLED", "resultCode": "Refused", "refusalReason": "Cancelled", "refusalReasonCode": "15", "expected_error": (ErrorType.PAYMENT_CANCELLED, ErrorCategory.OTHER)},
-        {"holderName": "SHOPPER_CANCELLED", "resultCode": "Refused", "refusalReason": "Shopper Cancelled", "refusalReasonCode": "16", "expected_error": (ErrorType.PAYMENT_CANCELLED_BY_CONSUMER, ErrorCategory.PROCESSING_ERROR)},
-        {"holderName": "INVALID_PIN", "resultCode": "Refused", "refusalReason": "Invalid Pin", "refusalReasonCode": "17", "expected_error": (ErrorType.INVALID_PIN, ErrorCategory.PAYMENT_METHOD_ERROR)},
-        {"holderName": "PIN_TRIES_EXCEEDED", "resultCode": "Refused", "refusalReason": "Pin tries exceeded", "refusalReasonCode": "18", "expected_error": (ErrorType.PIN_TRIES_EXCEEDED, ErrorCategory.PAYMENT_METHOD_ERROR)},
-        {"holderName": "PIN_VALIDATION_NOT_POSSIBLE", "resultCode": "Refused", "refusalReason": "Pin validation not possible", "refusalReasonCode": "19", "expected_error": (ErrorType.OTHER, ErrorCategory.PAYMENT_METHOD_ERROR)},
-        {"holderName": "FRAUD", "resultCode": "Refused", "refusalReason": "FRAUD", "refusalReasonCode": "20", "expected_error": (ErrorType.FRAUD, ErrorCategory.FRAUD_DECLINE)},
-        {"holderName": "NOT_SUBMITTED", "resultCode": "Refused", "refusalReason": "Not Submitted", "refusalReasonCode": "21", "expected_error": (ErrorType.OTHER, ErrorCategory.OTHER)},
-        {"holderName": "FRAUD_CANCELLED", "resultCode": "Cancelled", "refusalReason": "FRAUD-CANCELLED", "refusalReasonCode": "22", "expected_error": (ErrorType.FRAUD, ErrorCategory.FRAUD_DECLINE)},
-        {"holderName": "TRANSACTION_NOT_PERMITTED", "resultCode": "Refused", "refusalReason": "Transaction Not Permitted", "refusalReasonCode": "23", "expected_error": (ErrorType.NOT_SUPPORTED, ErrorCategory.PROCESSING_ERROR)},
-        {"holderName": "CVC_DECLINED", "resultCode": "Refused", "refusalReason": "CVC Declined", "refusalReasonCode": "24", "expected_error": (ErrorType.CVC_INVALID, ErrorCategory.PAYMENT_METHOD_ERROR)},
-        {"holderName": "RESTRICTED_CARD", "resultCode": "Refused", "refusalReason": "Restricted Card", "refusalReasonCode": "25", "expected_error": (ErrorType.RESTRICTED_CARD, ErrorCategory.PROCESSING_ERROR)},
-        {"holderName": "REVOCATION_OF_AUTH", "resultCode": "Refused", "refusalReason": "Revocation Of Auth", "refusalReasonCode": "26", "expected_error": (ErrorType.STOP_PAYMENT, ErrorCategory.PROCESSING_ERROR)},
-        {"holderName": "DECLINED_NON_GENERIC", "resultCode": "Refused", "refusalReason": "Declined Non Generic", "refusalReasonCode": "27", "expected_error": (ErrorType.OTHER, ErrorCategory.OTHER)},
-        {"holderName": "WITHDRAWAL_AMOUNT_EXCEEDED", "resultCode": "Refused", "refusalReason": "Withdrawal amount exceeded", "refusalReasonCode": "28", "expected_error": (ErrorType.INSUFFICENT_FUNDS, ErrorCategory.PROCESSING_ERROR)},
-        {"holderName": "WITHDRAWAL_COUNT_EXCEEDED", "resultCode": "Refused", "refusalReason": "Withdrawal count exceeded", "refusalReasonCode": "29", "expected_error": (ErrorType.INSUFFICENT_FUNDS, ErrorCategory.PROCESSING_ERROR)},
+        {"holderName": "ACQUIRER_FRAUD", "resultCode": "Refused", "refusalReason": "Acquirer Fraud", "refusalReasonCode": "14", "expected_error": ErrorType.FRAUD},
+        {"holderName": "CANCELLED", "resultCode": "Refused", "refusalReason": "Cancelled", "refusalReasonCode": "15", "expected_error": ErrorType.PAYMENT_CANCELLED},
+        {"holderName": "SHOPPER_CANCELLED", "resultCode": "Refused", "refusalReason": "Shopper Cancelled", "refusalReasonCode": "16", "expected_error": ErrorType.PAYMENT_CANCELLED_BY_CONSUMER},
+        {"holderName": "INVALID_PIN", "resultCode": "Refused", "refusalReason": "Invalid Pin", "refusalReasonCode": "17", "expected_error": ErrorType.INVALID_PIN},
+        {"holderName": "PIN_TRIES_EXCEEDED", "resultCode": "Refused", "refusalReason": "Pin tries exceeded", "refusalReasonCode": "18", "expected_error": ErrorType.PIN_TRIES_EXCEEDED},
+        {"holderName": "PIN_VALIDATION_NOT_POSSIBLE", "resultCode": "Refused", "refusalReason": "Pin validation not possible", "refusalReasonCode": "19", "expected_error": ErrorType.OTHER},
+        {"holderName": "FRAUD", "resultCode": "Refused", "refusalReason": "FRAUD", "refusalReasonCode": "20", "expected_error": ErrorType.FRAUD},
+        {"holderName": "NOT_SUBMITTED", "resultCode": "Refused", "refusalReason": "Not Submitted", "refusalReasonCode": "21", "expected_error": ErrorType.OTHER},
+        {"holderName": "FRAUD_CANCELLED", "resultCode": "Cancelled", "refusalReason": "FRAUD-CANCELLED", "refusalReasonCode": "22", "expected_error": ErrorType.FRAUD},
+        {"holderName": "TRANSACTION_NOT_PERMITTED", "resultCode": "Refused", "refusalReason": "Transaction Not Permitted", "refusalReasonCode": "23", "expected_error": ErrorType.NOT_SUPPORTED},
+        {"holderName": "CVC_DECLINED", "resultCode": "Refused", "refusalReason": "CVC Declined", "refusalReasonCode": "24", "expected_error": ErrorType.CVC_INVALID},
+        {"holderName": "RESTRICTED_CARD", "resultCode": "Refused", "refusalReason": "Restricted Card", "refusalReasonCode": "25", "expected_error": ErrorType.RESTRICTED_CARD},
+        {"holderName": "REVOCATION_OF_AUTH", "resultCode": "Refused", "refusalReason": "Revocation Of Auth", "refusalReasonCode": "26", "expected_error": ErrorType.STOP_PAYMENT},
+        {"holderName": "DECLINED_NON_GENERIC", "resultCode": "Refused", "refusalReason": "Declined Non Generic", "refusalReasonCode": "27", "expected_error": ErrorType.OTHER},
+        {"holderName": "WITHDRAWAL_AMOUNT_EXCEEDED", "resultCode": "Refused", "refusalReason": "Withdrawal amount exceeded", "refusalReasonCode": "28", "expected_error": ErrorType.INSUFFICENT_FUNDS},
+        {"holderName": "WITHDRAWAL_COUNT_EXCEEDED", "resultCode": "Refused", "refusalReason": "Withdrawal count exceeded", "refusalReasonCode": "29", "expected_error": ErrorType.INSUFFICENT_FUNDS},
         {"holderName": "PARTIALLY_APPROVED", "resultCode": "Authorised", "refusalReason": None, "refusalReasonCode": "30", "expected_error": None},
-        {"holderName": "ISSUER_SUSPECTED_FRAUD", "resultCode": "Refused", "refusalReason": "Issuer Suspected Fraud", "refusalReasonCode": "31", "expected_error": (ErrorType.FRAUD, ErrorCategory.FRAUD_DECLINE)},
-        {"holderName": "AVS_DECLINED", "resultCode": "Refused", "refusalReason": "AVS Declined", "refusalReasonCode": "32", "expected_error": (ErrorType.AVS_DECLINE, ErrorCategory.PROCESSING_ERROR)},
-        {"holderName": "PIN_REQUIRED", "resultCode": "Refused", "refusalReason": "Card requires online pin", "refusalReasonCode": "33", "expected_error": (ErrorType.PIN_REQUIRED, ErrorCategory.PROCESSING_ERROR)},
-        {"holderName": "NO_CHECKING_ACCOUNT", "resultCode": "Refused", "refusalReason": "No checking account available on Card", "refusalReasonCode": "34", "expected_error": (ErrorType.BANK_ERROR, ErrorCategory.PROCESSING_ERROR)},
-        {"holderName": "NO_SAVINGS_ACCOUNT", "resultCode": "Refused", "refusalReason": "No savings account available on Card", "refusalReasonCode": "35", "expected_error": (ErrorType.BANK_ERROR, ErrorCategory.PROCESSING_ERROR)},
-        {"holderName": "MOBILE_PIN_REQUIRED", "resultCode": "Refused", "refusalReason": "Mobile PIN required", "refusalReasonCode": "36", "expected_error": (ErrorType.PIN_REQUIRED, ErrorCategory.PROCESSING_ERROR)},
-        {"holderName": "CONTACTLESS_FALLBACK", "resultCode": "Refused", "refusalReason": "Contactless fallback", "refusalReasonCode": "37", "expected_error": (ErrorType.CONTACTLESS_FALLBACK, ErrorCategory.PROCESSING_ERROR)},
-        {"holderName": "AUTHENTICATION_REQUIRED", "resultCode": "Refused", "refusalReason": "Authentication required", "refusalReasonCode": "38", "expected_error": (ErrorType.AUTHENTICATION_REQUIRED, ErrorCategory.PROCESSING_ERROR)},
-        {"holderName": "RREQ_NOT_RECEIVED", "resultCode": "Refused", "refusalReason": "RReq not received from DS", "refusalReasonCode": "39", "expected_error": (ErrorType.AUTHENTICATION_FAILURE, ErrorCategory.AUTHENTICATION_ERROR)},
-        {"holderName": "BAN_CURRENT_AID", "resultCode": "Refused", "refusalReason": "Current AID is in Penalty Box.", "refusalReasonCode": "40", "expected_error": (ErrorType.OTHER, ErrorCategory.OTHER)},
-        {"holderName": "CVM_REQUIRED", "resultCode": "Refused", "refusalReason": "CVM Required Restart Payment", "refusalReasonCode": "41", "expected_error": (ErrorType.PIN_REQUIRED, ErrorCategory.PROCESSING_ERROR)},
-        {"holderName": "THREED_SECURE_ERROR", "resultCode": "Refused", "refusalReason": "3DS Authentication Error", "refusalReasonCode": "42", "expected_error": (ErrorType.AUTHENTICATION_FAILURE, ErrorCategory.AUTHENTICATION_ERROR)},
-        {"holderName": "ONLINE_PIN_REQUIRED", "resultCode": "Refused", "refusalReason": "Online PIN required", "refusalReasonCode": "43", "expected_error": (ErrorType.PIN_REQUIRED, ErrorCategory.PROCESSING_ERROR)},
-        {"holderName": "TRY_ANOTHER_INTERFACE", "resultCode": "Refused", "refusalReason": "Try another interface", "refusalReasonCode": "44", "expected_error": (ErrorType.OTHER, ErrorCategory.PROCESSING_ERROR)},
-        {"holderName": "CHIP_DOWNGRADE_MODE", "resultCode": "Refused", "refusalReason": "Chip downgrade mode", "refusalReasonCode": "45", "expected_error": (ErrorType.OTHER, ErrorCategory.PROCESSING_ERROR)},
-        {"holderName": "ERPS_BLOCK", "resultCode": "Refused", "refusalReason": "Transaction blocked by Adyen to prevent excessive retry fees", "refusalReasonCode": "46", "expected_error": (ErrorType.PROCESSOR_BLOCKED, ErrorCategory.PROCESSING_ERROR)}
+        {"holderName": "ISSUER_SUSPECTED_FRAUD", "resultCode": "Refused", "refusalReason": "Issuer Suspected Fraud", "refusalReasonCode": "31", "expected_error": ErrorType.FRAUD},
+        {"holderName": "AVS_DECLINED", "resultCode": "Refused", "refusalReason": "AVS Declined", "refusalReasonCode": "32", "expected_error": ErrorType.AVS_DECLINE},
+        {"holderName": "PIN_REQUIRED", "resultCode": "Refused", "refusalReason": "Card requires online pin", "refusalReasonCode": "33", "expected_error": ErrorType.PIN_REQUIRED},
+        {"holderName": "NO_CHECKING_ACCOUNT", "resultCode": "Refused", "refusalReason": "No checking account available on Card", "refusalReasonCode": "34", "expected_error": ErrorType.BANK_ERROR},
+        {"holderName": "NO_SAVINGS_ACCOUNT", "resultCode": "Refused", "refusalReason": "No savings account available on Card", "refusalReasonCode": "35", "expected_error": ErrorType.BANK_ERROR},
+        {"holderName": "MOBILE_PIN_REQUIRED", "resultCode": "Refused", "refusalReason": "Mobile PIN required", "refusalReasonCode": "36", "expected_error": ErrorType.PIN_REQUIRED},
+        {"holderName": "CONTACTLESS_FALLBACK", "resultCode": "Refused", "refusalReason": "Contactless fallback", "refusalReasonCode": "37", "expected_error": ErrorType.CONTACTLESS_FALLBACK},
+        {"holderName": "AUTHENTICATION_REQUIRED", "resultCode": "Refused", "refusalReason": "Authentication required", "refusalReasonCode": "38", "expected_error": ErrorType.AUTHENTICATION_REQUIRED},
+        {"holderName": "RREQ_NOT_RECEIVED", "resultCode": "Refused", "refusalReason": "RReq not received from DS", "refusalReasonCode": "39", "expected_error": ErrorType.AUTHENTICATION_FAILURE},
+        {"holderName": "BAN_CURRENT_AID", "resultCode": "Refused", "refusalReason": "Current AID is in Penalty Box.", "refusalReasonCode": "40", "expected_error": ErrorType.OTHER},
+        {"holderName": "CVM_REQUIRED", "resultCode": "Refused", "refusalReason": "CVM Required Restart Payment", "refusalReasonCode": "41", "expected_error": ErrorType.PIN_REQUIRED},
+        {"holderName": "THREED_SECURE_ERROR", "resultCode": "Refused", "refusalReason": "3DS Authentication Error", "refusalReasonCode": "42", "expected_error": ErrorType.AUTHENTICATION_FAILURE},
+        {"holderName": "ONLINE_PIN_REQUIRED", "resultCode": "Refused", "refusalReason": "Online PIN required", "refusalReasonCode": "43", "expected_error": ErrorType.PIN_REQUIRED},
+        {"holderName": "TRY_ANOTHER_INTERFACE", "resultCode": "Refused", "refusalReason": "Try another interface", "refusalReasonCode": "44", "expected_error": ErrorType.OTHER},
+        {"holderName": "CHIP_DOWNGRADE_MODE", "resultCode": "Refused", "refusalReason": "Chip downgrade mode", "refusalReasonCode": "45", "expected_error": ErrorType.OTHER},
+        {"holderName": "ERPS_BLOCK", "resultCode": "Refused", "refusalReason": "Transaction blocked by Adyen to prevent excessive retry fees", "refusalReasonCode": "46", "expected_error": ErrorType.PROCESSOR_BLOCKED}
     ]
 
     # Initialize the SDK
@@ -401,9 +401,9 @@ async def test_errors():
 
             # Verify the error mapping
             if test_case["expected_error"]:
-                error_type, error_category = test_case["expected_error"]
-                assert response["error_codes"][0]["code"] == error_type
-                assert response["error_codes"][0]["category"] == error_category
+                error_type = test_case["expected_error"]
+                assert response["error_codes"][0]["code"] == error_type.code
+                assert response["error_codes"][0]["category"] == error_type.category
 
             # Verify full provider response is included
             assert response["full_provider_response"] == mock_response_data

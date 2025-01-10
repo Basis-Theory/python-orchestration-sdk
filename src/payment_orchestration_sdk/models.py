@@ -30,50 +30,46 @@ class SourceType(str, Enum):
 
 
 class ErrorCategory(str, Enum):
+    AUTHENTICATION_ERROR = "Authentication Error"
     PROCESSING_ERROR = "Processing Error"
     PAYMENT_METHOD_ERROR = "Payment Method Error"
     FRAUD_DECLINE = "Fraud Decline"
-    AUTHENTICATION_ERROR = "Authentication Error"
     OTHER = "Other"
 
 
-class ErrorType(str, Enum):
-    """Error types for transaction responses."""
-    REFUSED = "refused"
-    REFERRAL = "referral"
-    ACQUIRER_ERROR = "acquirer_error"
-    BLOCKED_CARD = "blocked_card"
-    EXPIRED_CARD = "expired_card"
-    INVALID_CARD = "invalid_card"
-    INVALID_MERCHANT = "invalid_merchant"
-    PROCESSING_ERROR = "processing_error"
-    FRAUD = "fraud"
-    NOT_SUPPORTED = "not_supported"
-    INVALID_AMOUNT = "invalid_amount"
-    INVALID_PIN = "invalid_pin"
-    PIN_TRIES_EXCEEDED = "pin_tries_exceeded"
-    INVALID_API_KEY = "invalid_api_key"
-    UNAUTHORIZED = "unauthorized"
-    INSUFFICENT_FUNDS = "insufficient_funds"
-    PAYMENT_CANCELLED = "payment_cancelled"
-    PAYMENT_CANCELLED_BY_CONSUMER = "payment_cancelled_by_consumer"
-    CVC_INVALID = "cvc_invalid"
-    RESTRICTED_CARD = "restricted_card"
-    STOP_PAYMENT = "stop_payment"
-    AVS_DECLINE = "avs_decline"
-    PIN_REQUIRED = "pin_required"
-    BANK_ERROR = "bank_error"
-    CONTACTLESS_FALLBACK = "contactless_fallback"
-    AUTHENTICATION_REQUIRED = "authentication_required"
-    AUTHENTICATION_FAILURE = "authentication_failure"
-    PROCESSOR_BLOCKED = "processor_blocked"
-    DUPLICATE_PAYMENT = "duplicate_payment"
-    CARD_LOST = "card_lost"
-    PAYMENT_CAPTURE_INVALID = "payment_capture_invalid"
-    CARD_CARDHOLDER_INVALID = "card_cardholder_invalid"
-    NETWORK_TRANSACTION_ID_INVALID = "network_transaction_id_invalid"
-    PROCESSOR_TOKEN_ERROR = "processor_token_error"
-    OTHER = "other"
+class ErrorType(Enum):
+    """Enum for error types."""
+    REFUSED = ("refused", ErrorCategory.PROCESSING_ERROR)
+    REFERRAL = ("referral", ErrorCategory.PROCESSING_ERROR)
+    ACQUIRER_ERROR = ("acquirer_error", ErrorCategory.OTHER)
+    BLOCKED_CARD = ("blocked_card", ErrorCategory.PAYMENT_METHOD_ERROR)
+    EXPIRED_CARD = ("expired_card", ErrorCategory.PAYMENT_METHOD_ERROR)
+    INVALID_AMOUNT = ("invalid_amount", ErrorCategory.OTHER)
+    INVALID_CARD = ("invalid_card", ErrorCategory.PAYMENT_METHOD_ERROR)
+    OTHER = ("other", ErrorCategory.OTHER)
+    NOT_SUPPORTED = ("not_supported", ErrorCategory.PROCESSING_ERROR)
+    AUTHENTICATION_FAILURE = ("authentication_failure", ErrorCategory.PAYMENT_METHOD_ERROR)
+    INSUFFICENT_FUNDS = ("insufficient_funds", ErrorCategory.PAYMENT_METHOD_ERROR)
+    FRAUD = ("fraud", ErrorCategory.FRAUD_DECLINE)
+    PAYMENT_CANCELLED = ("payment_cancelled", ErrorCategory.OTHER)
+    PAYMENT_CANCELLED_BY_CONSUMER = ("payment_cancelled_by_consumer", ErrorCategory.PROCESSING_ERROR)
+    INVALID_PIN = ("invalid_pin", ErrorCategory.PAYMENT_METHOD_ERROR)
+    PIN_TRIES_EXCEEDED = ("pin_tries_exceeded", ErrorCategory.PAYMENT_METHOD_ERROR)
+    CVC_INVALID = ("cvc_invalid", ErrorCategory.PAYMENT_METHOD_ERROR)
+    RESTRICTED_CARD = ("restricted_card", ErrorCategory.PROCESSING_ERROR)
+    STOP_PAYMENT = ("stop_payment", ErrorCategory.PROCESSING_ERROR)
+    AVS_DECLINE = ("avs_decline", ErrorCategory.PROCESSING_ERROR)
+    PIN_REQUIRED = ("pin_required", ErrorCategory.PROCESSING_ERROR)
+    BANK_ERROR = ("bank_error", ErrorCategory.PROCESSING_ERROR)
+    CONTACTLESS_FALLBACK = ("contactless_fallback", ErrorCategory.PROCESSING_ERROR)
+    AUTHENTICATION_REQUIRED = ("authentication_required", ErrorCategory.PROCESSING_ERROR)
+    PROCESSOR_BLOCKED = ("processor_blocked", ErrorCategory.PROCESSING_ERROR)
+    INVALID_API_KEY = ("invalid_api_key", ErrorCategory.AUTHENTICATION_ERROR)
+    UNAUTHORIZED = ("unauthorized", ErrorCategory.AUTHENTICATION_ERROR)
+
+    def __init__(self, code: str, category: ErrorCategory):
+        self.code = code
+        self.category = category
 
 
 @dataclass
