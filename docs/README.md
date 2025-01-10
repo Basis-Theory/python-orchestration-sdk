@@ -13,15 +13,6 @@ The Payment Orchestration SDK is a Python library that simplifies payment proces
 - Type hints and dataclass models for better IDE support
 - [Providers](./providers/index.md) documentation for each provider supported by the SDK.
 
-## Documentation
-
-- [Getting Started](./getting-started.md)
-- [Authentication](./authentication.md)
-- [Processing Payments](./processing-payments.md)
-- [Error Handling](./error-handling.md)
-- [API Reference](./api-reference.md)
-- [Providers](./providers/index.md)
-
 ## Installation
 
 ```bash
@@ -69,45 +60,15 @@ transaction_request = {
 response = await sdk.adyen.transaction(transaction_request)  # Use sdk.<provider>.transaction()
 ```
 
+## Documentation
+
+- [Getting Started](./getting-started.md)
+- [Authentication](./authentication.md)
+- [Processing Payments](./processing-payments.md)
+- [Error Handling](./error-handling.md)
+- [API Reference](./api-reference.md)
+- [Providers](./providers/index.md)
+
 ## Support
 
 For support, please contact [support@basistheory.com](mailto:support@basistheory.com) or open an issue on GitHub. 
-
-## Development
-
-To contribute to the SDK:
-
-1. Fork the repository
-2. Create a virtual environment: `python -m venv venv`
-3. Activate the virtual environment: 
-   - Windows: `venv\Scripts\activate`
-   - Unix/MacOS: `source venv/bin/activate`
-4. Install development dependencies: `pip install -e ".[test]"`
-5. Make your changes
-6. Run tests to ensure everything works
-7. Submit a pull request
-
-### Running Tests
-
-1. Set up your environment variables:
-```bash
-export BASISTHEORY_API_KEY='your_basis_theory_api_key'
-export ADYEN_API_KEY='your_adyen_api_key'
-export ADYEN_MERCHANT_ACCOUNT='your_merchant_account'
-```
-
-2. Run the tests:
-```bash
-# Run all tests
-pytest
-
-# Run tests with coverage report
-pytest --cov=src/
-
-# Run a specific test file
-python test.py
-```
-
-## License
-
-[Add your license information here] 
