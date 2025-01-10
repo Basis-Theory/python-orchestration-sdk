@@ -13,49 +13,6 @@ from payment_orchestration_sdk.models import (
     ErrorType
 )
 
-# Expected error mappings for test verification
-EXPECTED_ERROR_MAPPING = {
-    "2": (ErrorType.REFUSED, ErrorCategory.PROCESSING_ERROR),  # Refused
-    "3": (ErrorType.REFERRAL, ErrorCategory.PROCESSING_ERROR),  # Referral
-    "4": (ErrorType.ACQUIRER_ERROR, ErrorCategory.OTHER),  # Acquirer Error
-    "5": (ErrorType.BLOCKED_CARD, ErrorCategory.PAYMENT_METHOD_ERROR),  # Blocked Card
-    "6": (ErrorType.EXPIRED_CARD, ErrorCategory.PAYMENT_METHOD_ERROR),  # Expired Card
-    "7": (ErrorType.INVALID_AMOUNT, ErrorCategory.OTHER),  # Invalid Amount
-    "8": (ErrorType.INVALID_CARD, ErrorCategory.PAYMENT_METHOD_ERROR),  # Invalid Card Number
-    "9": (ErrorType.OTHER, ErrorCategory.OTHER),  # Issuer Unavailable
-    "10": (ErrorType.NOT_SUPPORTED, ErrorCategory.PROCESSING_ERROR),  # Not supported
-    "11": (ErrorType.AUTHENTICATION_FAILURE, ErrorCategory.PAYMENT_METHOD_ERROR),  # 3D Not Authenticated
-    "12": (ErrorType.INSUFFICENT_FUNDS, ErrorCategory.PAYMENT_METHOD_ERROR),  # Not enough balance
-    "14": (ErrorType.FRAUD, ErrorCategory.FRAUD_DECLINE),  # Acquirer Fraud
-    "15": (ErrorType.PAYMENT_CANCELLED, ErrorCategory.OTHER),  # Cancelled
-    "16": (ErrorType.PAYMENT_CANCELLED_BY_CONSUMER, ErrorCategory.PROCESSING_ERROR),  # Shopper Cancelled
-    "17": (ErrorType.INVALID_PIN, ErrorCategory.PAYMENT_METHOD_ERROR),  # Invalid Pin
-    "18": (ErrorType.PIN_TRIES_EXCEEDED, ErrorCategory.PAYMENT_METHOD_ERROR),  # Pin tries exceeded
-    "20": (ErrorType.FRAUD, ErrorCategory.FRAUD_DECLINE),  # FRAUD
-    "21": (ErrorType.OTHER, ErrorCategory.OTHER),  # Not Submitted
-    "22": (ErrorType.FRAUD, ErrorCategory.FRAUD_DECLINE),  # FRAUD-CANCELLED
-    "23": (ErrorType.NOT_SUPPORTED, ErrorCategory.PROCESSING_ERROR),  # Transaction Not Permitted
-    "24": (ErrorType.CVC_INVALID, ErrorCategory.PAYMENT_METHOD_ERROR),  # CVC Declined
-    "25": (ErrorType.RESTRICTED_CARD, ErrorCategory.PROCESSING_ERROR),  # Restricted Card
-    "26": (ErrorType.STOP_PAYMENT, ErrorCategory.PROCESSING_ERROR),  # Revocation Of Auth
-    "27": (ErrorType.OTHER, ErrorCategory.OTHER),  # Declined Non Generic
-    "28": (ErrorType.INSUFFICENT_FUNDS, ErrorCategory.PROCESSING_ERROR),  # Withdrawal amount exceeded
-    "29": (ErrorType.INSUFFICENT_FUNDS, ErrorCategory.PROCESSING_ERROR),  # Withdrawal count exceeded
-    "31": (ErrorType.FRAUD, ErrorCategory.FRAUD_DECLINE),  # Issuer Suspected Fraud
-    "32": (ErrorType.AVS_DECLINE, ErrorCategory.PROCESSING_ERROR),  # AVS Declined
-    "33": (ErrorType.PIN_REQUIRED, ErrorCategory.PROCESSING_ERROR),  # Card requires online pin
-    "34": (ErrorType.BANK_ERROR, ErrorCategory.PROCESSING_ERROR),  # No checking account available on Card
-    "35": (ErrorType.BANK_ERROR, ErrorCategory.PROCESSING_ERROR),  # No savings account available on Card
-    "36": (ErrorType.PIN_REQUIRED, ErrorCategory.PROCESSING_ERROR),  # Mobile pin required
-    "37": (ErrorType.CONTACTLESS_FALLBACK, ErrorCategory.PROCESSING_ERROR),  # Contactless fallback
-    "38": (ErrorType.AUTHENTICATION_REQUIRED, ErrorCategory.PROCESSING_ERROR),  # Authentication required
-    "39": (ErrorType.AUTHENTICATION_FAILURE, ErrorCategory.AUTHENTICATION_ERROR),  # RReq not received from DS
-    "40": (ErrorType.OTHER, ErrorCategory.OTHER),  # Current AID is in Penalty Box
-    "41": (ErrorType.PIN_REQUIRED, ErrorCategory.PROCESSING_ERROR),  # CVM Required Restart Payment
-    "42": (ErrorType.AUTHENTICATION_FAILURE, ErrorCategory.AUTHENTICATION_ERROR),  # 3DS Authentication Error
-    "46": (ErrorType.PROCESSOR_BLOCKED, ErrorCategory.PROCESSING_ERROR),  # Transaction blocked by Adyen to prevent excessive retry fees
-}
-
 @pytest.mark.asyncio
 async def test_successful_transaction():
     # Mock response data that matches Adyen's format
@@ -165,6 +122,140 @@ async def test_successful_transaction():
             datetime.fromisoformat(response['created_at'].replace('Z', '+00:00'))
         except ValueError:
             pytest.fail("created_at is not a valid ISO datetime string")
+
+@pytest.mark.asyncio
+async def test_invalid_api_key_error():
+    # Mock error response for invalid API key (401)
+    mock_response_data = {
+        "status": 401,
+        "errorCode": "901",
+        "message": "Invalid API key",
+        "errorType": "security"
+    }
+
+    # Create a mock response that raises HTTPError
+    mock_response = MagicMock()
+    mock_response.json.return_value = mock_response_data
+    mock_response.status_code = 401
+    mock_response.ok = False
+
+    # Create a mock HTTPError
+    mock_error = requests.exceptions.HTTPError(response=mock_response)
+    mock_error.response = mock_response
+
+    # Initialize the SDK
+    sdk = PaymentOrchestrationSDK.init({
+        'isTest': True,
+        'btApiKey': 'test_bt_api_key',
+        'providerConfig': {
+            'adyen': {
+                'apiKey': 'invalid_api_key',
+                'merchantAccount': 'test_merchant',
+            }
+        }
+    })
+
+    # Create a test transaction request
+    transaction_request = {
+        'reference': 'test_reference',
+        'amount': {
+            'value': 1,
+            'currency': 'USD'
+        },
+        'source': {
+            'type': SourceType.PROCESSOR_TOKEN,
+            'id': 'test_token_id',
+            'store_with_provider': False
+        }
+    }
+
+    # Mock the requests.request method to raise HTTPError
+    with patch('payment_orchestration_sdk.utils.request_client.requests.request', side_effect=mock_error) as mock_request:
+        # Make the transaction request
+        response = await sdk.adyen.transaction(transaction_request)
+
+        # Verify the request was made with correct parameters
+        mock_request.assert_called_once()
+        call_args = mock_request.call_args
+        assert call_args[1]['method'] == 'POST'
+        assert call_args[1]['headers']['X-API-Key'] == 'invalid_api_key'
+        assert call_args[1]['headers']['Content-Type'] == 'application/json'
+        assert 'https://checkout-test.adyen.com/v71/payments' in call_args[1]['url']
+
+        # Verify error response structure
+        assert "error_codes" in response
+        assert len(response["error_codes"]) == 1
+        assert response["error_codes"][0]["code"] == ErrorType.INVALID_API_KEY
+        assert response["error_codes"][0]["category"] == ErrorCategory.AUTHENTICATION_ERROR
+        assert response["provider_errors"] == ["Invalid API key"]
+        assert response["full_provider_response"] == mock_response_data
+
+@pytest.mark.asyncio
+async def test_unauthorized_error():
+    # Mock error response for unauthorized access (403)
+    mock_response_data = {
+        "status": 403,
+        "errorCode": "903",
+        "message": "Access Not Allowed",
+        "errorType": "security"
+    }
+
+    # Create a mock response that raises HTTPError
+    mock_response = MagicMock()
+    mock_response.json.return_value = mock_response_data
+    mock_response.status_code = 403
+    mock_response.ok = False
+
+    # Create a mock HTTPError
+    mock_error = requests.exceptions.HTTPError(response=mock_response)
+    mock_error.response = mock_response
+
+    # Initialize the SDK
+    sdk = PaymentOrchestrationSDK.init({
+        'isTest': True,
+        'btApiKey': 'test_bt_api_key',
+        'providerConfig': {
+            'adyen': {
+                'apiKey': 'test_adyen_api_key',
+                'merchantAccount': 'test_merchant',
+            }
+        }
+    })
+
+    # Create a test transaction request
+    transaction_request = {
+        'reference': 'test_reference',
+        'amount': {
+            'value': 1,
+            'currency': 'USD'
+        },
+        'source': {
+            'type': SourceType.PROCESSOR_TOKEN,
+            'id': 'test_token_id',
+            'store_with_provider': False
+        }
+    }
+
+    # Mock the requests.request method to raise HTTPError
+    with patch('payment_orchestration_sdk.utils.request_client.requests.request', side_effect=mock_error) as mock_request:
+        # Make the transaction request
+        response = await sdk.adyen.transaction(transaction_request)
+
+        # Verify the request was made with correct parameters
+        mock_request.assert_called_once()
+        call_args = mock_request.call_args
+        assert call_args[1]['method'] == 'POST'
+        assert call_args[1]['headers']['X-API-Key'] == 'test_adyen_api_key'
+        assert call_args[1]['headers']['Content-Type'] == 'application/json'
+        assert 'https://checkout-test.adyen.com/v71/payments' in call_args[1]['url']
+
+        # Verify error response structure
+        assert "error_codes" in response
+        assert len(response["error_codes"]) == 1
+        assert response["error_codes"][0]["code"] == ErrorType.UNAUTHORIZED
+        assert response["error_codes"][0]["category"] == ErrorCategory.AUTHENTICATION_ERROR
+        assert response["provider_errors"] == ["Access Not Allowed"]
+        assert response["full_provider_response"] == mock_response_data
 
 @pytest.mark.asyncio
 async def test_errors():

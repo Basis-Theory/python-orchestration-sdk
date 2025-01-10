@@ -258,15 +258,66 @@ class AdyenClient:
 
             try:
                 # Make the request (using proxy for BT tokens, direct for processor tokens)
-                response = self.request_client.request(
-                    url=f"{self.base_url}/payments",
-                    method="POST",
-                    headers=headers,
-                    data=payload,
-                    use_bt_proxy=request.source.type != SourceType.PROCESSOR_TOKEN
-                )
+                try:
+                    response = self.request_client.request(
+                        url=f"{self.base_url}/payments",
+                        method="POST",
+                        headers=headers,
+                        data=payload,
+                        use_bt_proxy=request.source.type != SourceType.PROCESSOR_TOKEN
+                    )
+                except requests.exceptions.HTTPError as e:
+                    # Handle HTTP errors (like 401, 403, etc.)
+                    response = e.response
+                    response_data = response.json()
+
+                    # Map HTTP status codes to error types
+                    if response.status_code == 401:
+                        error_category = ErrorCategory.AUTHENTICATION_ERROR
+                        error_type = ErrorType.INVALID_API_KEY
+                    elif response.status_code == 403:
+                        error_category = ErrorCategory.AUTHENTICATION_ERROR
+                        error_type = ErrorType.UNAUTHORIZED
+                    else:
+                        error_category = ErrorCategory.PROCESSING_ERROR
+                        error_type = ErrorType.OTHER
+
+                    return {
+                        "error_codes": [
+                            {
+                                "category": error_category,
+                                "code": error_type
+                            }
+                        ],
+                        "provider_errors": [response_data.get("message", "")],
+                        "full_provider_response": response_data
+                    }
 
                 response_data = response.json()
+
+                # Check if it's an error response (non-200 status code)
+                if not response.ok:
+                    # Map HTTP status codes to error types
+                    if response.status_code == 401:
+                        error_category = ErrorCategory.AUTHENTICATION_ERROR
+                        error_type = ErrorType.INVALID_API_KEY
+                    elif response.status_code == 403:
+                        error_category = ErrorCategory.AUTHENTICATION_ERROR
+                        error_type = ErrorType.UNAUTHORIZED
+                    else:
+                        error_category = ErrorCategory.PROCESSING_ERROR
+                        error_type = ErrorType.OTHER
+
+                    return {
+                        "error_codes": [
+                            {
+                                "category": error_category,
+                                "code": error_type
+                            }
+                        ],
+                        "provider_errors": [response_data.get("message", "")],
+                        "full_provider_response": response_data
+                    }
 
                 # Check if it's an error response (Adyen returns "Refused" for declined transactions)
                 if response_data.get("resultCode") in ["Refused", "Error", "Cancelled"]:
@@ -287,32 +338,8 @@ class AdyenClient:
                 # Transform the successful response to our format
                 return await self._transform_adyen_response(response_data, request)
 
-            except requests.exceptions.HTTPError as e:
-                # Handle HTTP errors (like 401, 403, etc.)
-                response = e.response
-                response_data = response.json()
-                
-                # Map HTTP status codes to error types
-                if response.status_code == 401:
-                    error_category = ErrorCategory.AUTHENTICATION_ERROR
-                    error_type = ErrorType.INVALID_API_KEY
-                elif response.status_code == 403:
-                    error_category = ErrorCategory.AUTHENTICATION_ERROR
-                    error_type = ErrorType.UNAUTHORIZED
-                else:
-                    error_category = ErrorCategory.PROCESSING_ERROR
-                    error_type = ErrorType.OTHER
-
-                return {
-                    "error_codes": [
-                        {
-                            "category": error_category,
-                            "code": error_type
-                        }
-                    ],
-                    "provider_errors": [response_data.get("message", "")],
-                    "full_provider_response": response_data
-                }
+            except Exception as e:
+                raise ProcessingError(f"Error processing transaction: {str(e)}")
 
         except KeyError as e:
             raise ValidationError(f"Missing required field: {str(e)}")
