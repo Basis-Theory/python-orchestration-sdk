@@ -13,10 +13,10 @@ from datetime import datetime
 
 
 RECURRING_TYPE_MAPPING = {
-    RecurringType.ECOMMERCE: "ecommerce",
-    RecurringType.CARD_ON_FILE: "card_on_file",
-    RecurringType.SUBSCRIPTION: "subscription",
-    RecurringType.UNSCHEDULED: "unscheduled"
+    RecurringType.ONE_TIME: None,
+    RecurringType.CARD_ON_FILE: "CardOnFile",
+    RecurringType.SUBSCRIPTION: "Subscription",
+    RecurringType.UNSCHEDULED: "UnscheduledCardOnFile"
 }
 
 
@@ -36,7 +36,7 @@ class AdyenClient:
     def __init__(self, api_key: str, merchant_account: str, is_test: bool, bt_api_key: str):
         self.api_key = api_key
         self.merchant_account = merchant_account
-        self.base_url = "https://checkout-test.adyen.com/v70" if is_test else "https://checkout-live.adyen.com/v70"
+        self.base_url = "https://checkout-test.adyen.com/v71" if is_test else "https://checkout-live.adyen.com/v71"
         self.request_client = RequestClient(bt_api_key)
 
     def _get_status_code(self, adyen_result_code: str) -> TransactionStatusCode:
@@ -165,15 +165,14 @@ class AdyenClient:
             "source": {
                 "type": request.source.type,
                 "id": request.source.id,
+                # checking both as recurringDetailReference is deprecated, although it still appears without storedPaymentMethodId
                 "provisioned": {
-                    "id": response_data.get("additionalData", {}).get("PaymentAccountReference", "")
-                } if response_data.get("additionalData", {}).get("PaymentAccountReference") else None
+                    "id": response_data.get("paymentMethod", {}).get("storedPaymentMethodId", "") or 
+                         response_data.get("additionalData", {}).get("recurring.recurringDetailReference", "")
+                } if (response_data.get("paymentMethod", {}).get("storedPaymentMethodId") or 
+                      response_data.get("additionalData", {}).get("recurring.recurringDetailReference")) else None
             },
-            "three_ds": {
-                "downgraded": response_data.get("additionalData", {}).get("scaExemptionRequested") == "transactionRiskAnalysis",
-                "enrolled": None,  # Adyen doesn't provide this in the initial response
-                "eci": response_data.get("additionalData", {}).get("eci")
-            } if "additionalData" in response_data else None,
+            "networkTransactionId": response_data.get("additionalData", {}).get("networkTxReference"),
             "full_provider_response": response_data,
             "created_at": datetime.utcnow().isoformat() + "Z"
         }
@@ -195,6 +194,7 @@ class AdyenClient:
                 "Content-Type": "application/json"
             }
 
+            print(f"Payload: {payload}")
             # Make the request (using proxy for BT tokens, direct for processor tokens)
             response = self.request_client.request(
                 url=f"{self.base_url}/payments",

@@ -17,7 +17,7 @@ class TransactionStatusCode(str, Enum):
 
 
 class RecurringType(str, Enum):
-    ECOMMERCE = "ECOMMERCE"
+    ONE_TIME     = "ONE_TIME"
     CARD_ON_FILE = "CARD_ON_FILE"
     SUBSCRIPTION = "SUBSCRIPTION"
     UNSCHEDULED = "UNSCHEDULED"
@@ -93,14 +93,6 @@ class TransactionStatus:
     code: TransactionStatusCode
     provider_code: str
 
-
-@dataclass
-class TransactionThreeDS:
-    downgraded: bool
-    enrolled: Optional[str] = None
-    eci: Optional[str] = None
-
-
 @dataclass
 class ProvisionedSource:
     id: str
@@ -122,4 +114,4 @@ class TransactionResponse:
     source: TransactionSource
     full_provider_response: Dict[str, Any]
     created_at: datetime
-    three_ds: Optional[TransactionThreeDS] = None 
+    networkTransactionId: Optional[str] = None 
