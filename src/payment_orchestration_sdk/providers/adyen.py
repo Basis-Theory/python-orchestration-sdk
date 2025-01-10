@@ -1,17 +1,24 @@
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, Optional
+from datetime import datetime
 import requests
-from ..exceptions import ConfigurationError, APIError, ValidationError
-from ..utils import RequestClient, create_transaction_request
+
 from ..models import (
     TransactionRequest,
+    Amount,
     Source,
     SourceType,
+    Customer,
+    Address,
+    StatementDescription,
+    ThreeDS,
     RecurringType,
     TransactionStatusCode,
-    ErrorCategory,
-    ErrorType
+    ErrorType,
+    ErrorCategory
 )
-from datetime import datetime
+from ..exceptions import ValidationError, ProcessingError
+from ..utils.model_utils import create_transaction_request
+from ..utils.request_client import RequestClient
 
 
 RECURRING_TYPE_MAPPING = {
@@ -35,47 +42,51 @@ STATUS_CODE_MAPPING = {
 }
 
 
-# Map Adyen refusalReasonCode to our error types and categories
+# Mapping of Adyen refusal reason codes to our error types and categories
 ERROR_CODE_MAPPING = {
-    "2": (ErrorType.REFUSED, ErrorCategory.PROCESSING_ERROR),              # Adyen: Refused - Transaction was refused
-    "3": (ErrorType.REFERRAL, ErrorCategory.PROCESSING_ERROR),            # Adyen: Referral - Transaction needs referral
-    "4": (ErrorType.ACQUIRER_ERROR, ErrorCategory.OTHER),                 # Adyen: Acquirer Error - Error occurred at acquirer
-    "5": (ErrorType.BLOCKED_CARD, ErrorCategory.PAYMENT_METHOD_ERROR),    # Adyen: Blocked Card - Card is blocked
-    "6": (ErrorType.EXPIRED_CARD, ErrorCategory.PAYMENT_METHOD_ERROR),    # Adyen: Expired Card - Card has expired
-    "7": (ErrorType.INVALID_AMOUNT, ErrorCategory.OTHER),                 # Adyen: Invalid Amount - Amount is invalid
-    "8": (ErrorType.INVALID_CARD_NUMBER, ErrorCategory.PAYMENT_METHOD_ERROR),  # Adyen: Invalid Card Number - Card number is invalid
-    "9": (ErrorType.ISSUER_UNAVAILABLE, ErrorCategory.OTHER),            # Adyen: Issuer Unavailable - Card issuer is unavailable
-    "10": (ErrorType.PAYMENT_NOT_SUPPORTED, ErrorCategory.PROCESSING_ERROR),  # Adyen: Not supported - Payment method not supported
-    "11": (ErrorType.THREE_DS_ERROR, ErrorCategory.PAYMENT_METHOD_ERROR),  # Adyen: 3D Not Authenticated - 3DS authentication failed
-    "12": (ErrorType.INSUFFICIENT_FUNDS, ErrorCategory.PAYMENT_METHOD_ERROR),  # Adyen: Not enough balance - Insufficient funds
-    "14": (ErrorType.FRAUD, ErrorCategory.FRAUD_DECLINE),                # Adyen: Acquirer Fraud - Fraud detected by acquirer
-    "15": (ErrorType.PAYMENT_CANCELLED, ErrorCategory.OTHER),            # Adyen: Cancelled - Payment was cancelled
-    "16": (ErrorType.PAYMENT_CANCELLED_BY_CONSUMER, ErrorCategory.PROCESSING_ERROR),  # Adyen: Shopper Cancelled - Shopper cancelled payment
-    "17": (ErrorType.PIN_INVALID, ErrorCategory.PAYMENT_METHOD_ERROR),   # Adyen: Invalid Pin - PIN is invalid
-    "18": (ErrorType.PIN_INVALID, ErrorCategory.PAYMENT_METHOD_ERROR),   # Adyen: Pin tries exceeded - Too many PIN attempts
-    "20": (ErrorType.FRAUD, ErrorCategory.FRAUD_DECLINE),                # Adyen: FRAUD - Fraud detected
-    "21": (ErrorType.INCORRECT_PAYMENT, ErrorCategory.OTHER),            # Adyen: Not Submitted - Payment not submitted
-    "22": (ErrorType.FRAUD, ErrorCategory.FRAUD_DECLINE),                # Adyen: FRAUD-CANCELLED - Cancelled due to fraud
-    "23": (ErrorType.PAYMENT_NOT_SUPPORTED, ErrorCategory.PROCESSING_ERROR),  # Adyen: Transaction Not Permitted - Transaction not allowed
-    "24": (ErrorType.CVC_INVALID, ErrorCategory.PAYMENT_METHOD_ERROR),   # Adyen: CVC Declined - CVC validation failed
-    "25": (ErrorType.RESTRICTED_CARD, ErrorCategory.PROCESSING_ERROR),   # Adyen: Restricted Card - Card is restricted
-    "26": (ErrorType.STOP_PAYMENT, ErrorCategory.PROCESSING_ERROR),      # Adyen: Revocation Of Auth - Authorization was revoked
-    "27": (ErrorType.OTHER, ErrorCategory.OTHER),                        # Adyen: Declined Non Generic - Generic decline
-    "28": (ErrorType.INSUFFICIENT_FUNDS, ErrorCategory.PROCESSING_ERROR),  # Adyen: Withdrawal amount exceeded - Amount exceeds withdrawal limit
-    "29": (ErrorType.INSUFFICIENT_FUNDS, ErrorCategory.PROCESSING_ERROR),  # Adyen: Withdrawal count exceeded - Too many withdrawals
-    "31": (ErrorType.FRAUD, ErrorCategory.FRAUD_DECLINE),                # Adyen: Issuer Suspected Fraud - Fraud suspected by issuer
-    "32": (ErrorType.AVS_DECLINE, ErrorCategory.PROCESSING_ERROR),       # Adyen: AVS Declined - Address verification failed
-    "33": (ErrorType.PIN_REQUIRED, ErrorCategory.PROCESSING_ERROR),      # Adyen: Card requires online pin - PIN required
-    "34": (ErrorType.BANK_ERROR, ErrorCategory.PROCESSING_ERROR),        # Adyen: No checking account - No checking account available
-    "35": (ErrorType.BANK_ERROR, ErrorCategory.PROCESSING_ERROR),        # Adyen: No savings account - No savings account available
-    "36": (ErrorType.PIN_REQUIRED, ErrorCategory.PROCESSING_ERROR),      # Adyen: Mobile pin required - Mobile PIN required
-    "37": (ErrorType.CONTACTLESS_FALLBACK, ErrorCategory.PROCESSING_ERROR),  # Adyen: Contactless fallback - Contactless not allowed
-    "38": (ErrorType.AUTHENTICATION_REQUIRED, ErrorCategory.PROCESSING_ERROR),  # Adyen: Authentication required - Additional authentication needed
-    "39": (ErrorType.AUTHENTICATION_FAILURE, ErrorCategory.AUTHENTICATION_ERROR),  # Adyen: RReq not received from DS - 3DS authentication error
-    "40": (ErrorType.OTHER, ErrorCategory.OTHER),                        # Adyen: Current AID is in Penalty Box - Card blocked temporarily
-    "41": (ErrorType.PIN_REQUIRED, ErrorCategory.PROCESSING_ERROR),      # Adyen: CVM Required Restart Payment - Cardholder verification needed
-    "42": (ErrorType.AUTHENTICATION_FAILURE, ErrorCategory.AUTHENTICATION_ERROR),  # Adyen: 3DS Authentication Error - 3DS process failed
-    "46": (ErrorType.PROCESSOR_BLOCKED, ErrorCategory.PROCESSING_ERROR),  # Adyen: Transaction blocked - Blocked to prevent excessive fees
+    "2": (ErrorType.REFUSED, ErrorCategory.PROCESSING_ERROR),  # Refused
+    "3": (ErrorType.REFERRAL, ErrorCategory.PROCESSING_ERROR),  # Referral
+    "4": (ErrorType.ACQUIRER_ERROR, ErrorCategory.OTHER),  # Acquirer Error
+    "5": (ErrorType.BLOCKED_CARD, ErrorCategory.PAYMENT_METHOD_ERROR),  # Blocked Card
+    "6": (ErrorType.EXPIRED_CARD, ErrorCategory.PAYMENT_METHOD_ERROR),  # Expired Card
+    "7": (ErrorType.INVALID_AMOUNT, ErrorCategory.OTHER),  # Invalid Amount
+    "8": (ErrorType.INVALID_CARD, ErrorCategory.PAYMENT_METHOD_ERROR),  # Invalid Card Number
+    "9": (ErrorType.OTHER, ErrorCategory.OTHER),  # Issuer Unavailable
+    "10": (ErrorType.NOT_SUPPORTED, ErrorCategory.PROCESSING_ERROR),  # Not supported
+    "11": (ErrorType.AUTHENTICATION_FAILURE, ErrorCategory.PAYMENT_METHOD_ERROR),  # 3D Not Authenticated
+    "12": (ErrorType.INSUFFICENT_FUNDS, ErrorCategory.PAYMENT_METHOD_ERROR),  # Not enough balance
+    "14": (ErrorType.FRAUD, ErrorCategory.FRAUD_DECLINE),  # Acquirer Fraud
+    "15": (ErrorType.PAYMENT_CANCELLED, ErrorCategory.OTHER),  # Cancelled
+    "16": (ErrorType.PAYMENT_CANCELLED_BY_CONSUMER, ErrorCategory.PROCESSING_ERROR),  # Shopper Cancelled
+    "17": (ErrorType.INVALID_PIN, ErrorCategory.PAYMENT_METHOD_ERROR),  # Invalid Pin
+    "18": (ErrorType.PIN_TRIES_EXCEEDED, ErrorCategory.PAYMENT_METHOD_ERROR),  # Pin tries exceeded
+    "19": (ErrorType.OTHER, ErrorCategory.PAYMENT_METHOD_ERROR),  # Pin validation not possible
+    "20": (ErrorType.FRAUD, ErrorCategory.FRAUD_DECLINE),  # FRAUD
+    "21": (ErrorType.OTHER, ErrorCategory.OTHER),  # Not Submitted
+    "22": (ErrorType.FRAUD, ErrorCategory.FRAUD_DECLINE),  # FRAUD-CANCELLED
+    "23": (ErrorType.NOT_SUPPORTED, ErrorCategory.PROCESSING_ERROR),  # Transaction Not Permitted
+    "24": (ErrorType.CVC_INVALID, ErrorCategory.PAYMENT_METHOD_ERROR),  # CVC Declined
+    "25": (ErrorType.RESTRICTED_CARD, ErrorCategory.PROCESSING_ERROR),  # Restricted Card
+    "26": (ErrorType.STOP_PAYMENT, ErrorCategory.PROCESSING_ERROR),  # Revocation Of Auth
+    "27": (ErrorType.OTHER, ErrorCategory.OTHER),  # Declined Non Generic
+    "28": (ErrorType.INSUFFICENT_FUNDS, ErrorCategory.PROCESSING_ERROR),  # Withdrawal amount exceeded
+    "29": (ErrorType.INSUFFICENT_FUNDS, ErrorCategory.PROCESSING_ERROR),  # Withdrawal count exceeded
+    "31": (ErrorType.FRAUD, ErrorCategory.FRAUD_DECLINE),  # Issuer Suspected Fraud
+    "32": (ErrorType.AVS_DECLINE, ErrorCategory.PROCESSING_ERROR),  # AVS Declined
+    "33": (ErrorType.PIN_REQUIRED, ErrorCategory.PROCESSING_ERROR),  # Card requires online pin
+    "34": (ErrorType.BANK_ERROR, ErrorCategory.PROCESSING_ERROR),  # No checking account available on Card
+    "35": (ErrorType.BANK_ERROR, ErrorCategory.PROCESSING_ERROR),  # No savings account available on Card
+    "36": (ErrorType.PIN_REQUIRED, ErrorCategory.PROCESSING_ERROR),  # Mobile pin required
+    "37": (ErrorType.CONTACTLESS_FALLBACK, ErrorCategory.PROCESSING_ERROR),  # Contactless fallback
+    "38": (ErrorType.AUTHENTICATION_REQUIRED, ErrorCategory.PROCESSING_ERROR),  # Authentication required
+    "39": (ErrorType.AUTHENTICATION_FAILURE, ErrorCategory.AUTHENTICATION_ERROR),  # RReq not received from DS
+    "40": (ErrorType.OTHER, ErrorCategory.OTHER),  # Current AID is in Penalty Box
+    "41": (ErrorType.PIN_REQUIRED, ErrorCategory.PROCESSING_ERROR),  # CVM Required Restart Payment
+    "42": (ErrorType.AUTHENTICATION_FAILURE, ErrorCategory.AUTHENTICATION_ERROR),  # 3DS Authentication Error
+    "43": (ErrorType.PIN_REQUIRED, ErrorCategory.PROCESSING_ERROR),  # Online PIN required
+    "44": (ErrorType.OTHER, ErrorCategory.PROCESSING_ERROR),  # Try another interface
+    "45": (ErrorType.OTHER, ErrorCategory.PROCESSING_ERROR),  # Chip downgrade mode
+    "46": (ErrorType.PROCESSOR_BLOCKED, ErrorCategory.PROCESSING_ERROR),  # Transaction blocked by Adyen to prevent excessive retry fees
 }
 
 
@@ -245,24 +256,53 @@ class AdyenClient:
                 "Content-Type": "application/json"
             }
 
-            print(f"Payload: {payload}")
-            # Make the request (using proxy for BT tokens, direct for processor tokens)
-            response = self.request_client.request(
-                url=f"{self.base_url}/payments",
-                method="POST",
-                headers=headers,
-                data=payload,
-                use_bt_proxy=request.source.type != SourceType.PROCESSOR_TOKEN
-            )
+            try:
+                # Make the request (using proxy for BT tokens, direct for processor tokens)
+                response = self.request_client.request(
+                    url=f"{self.base_url}/payments",
+                    method="POST",
+                    headers=headers,
+                    data=payload,
+                    use_bt_proxy=request.source.type != SourceType.PROCESSOR_TOKEN
+                )
 
-            response_data = response.json()
-            print("Response: ", response_data)
+                response_data = response.json()
 
-            # Check if it's an error response (Adyen returns "Refused" for declined transactions)
-            if response_data.get("resultCode") == "Refused":
-                refusal_code = response_data.get("refusalReasonCode", "")
-                error_type, error_category = ERROR_CODE_MAPPING.get(refusal_code, (ErrorType.OTHER, ErrorCategory.OTHER))
+                # Check if it's an error response (Adyen returns "Refused" for declined transactions)
+                if response_data.get("resultCode") in ["Refused", "Error", "Cancelled"]:
+                    refusal_code = response_data.get("refusalReasonCode", "")
+                    error_type, error_category = ERROR_CODE_MAPPING.get(refusal_code, (ErrorType.OTHER, ErrorCategory.OTHER))
+
+                    return {
+                        "error_codes": [
+                            {
+                                "category": error_category,
+                                "code": error_type
+                            }
+                        ],
+                        "provider_errors": [response_data.get("refusalReason", "")],
+                        "full_provider_response": response_data
+                    }
+
+                # Transform the successful response to our format
+                return await self._transform_adyen_response(response_data, request)
+
+            except requests.exceptions.HTTPError as e:
+                # Handle HTTP errors (like 401, 403, etc.)
+                response = e.response
+                response_data = response.json()
                 
+                # Map HTTP status codes to error types
+                if response.status_code == 401:
+                    error_category = ErrorCategory.AUTHENTICATION_ERROR
+                    error_type = ErrorType.INVALID_API_KEY
+                elif response.status_code == 403:
+                    error_category = ErrorCategory.AUTHENTICATION_ERROR
+                    error_type = ErrorType.UNAUTHORIZED
+                else:
+                    error_category = ErrorCategory.PROCESSING_ERROR
+                    error_type = ErrorType.OTHER
+
                 return {
                     "error_codes": [
                         {
@@ -270,14 +310,11 @@ class AdyenClient:
                             "code": error_type
                         }
                     ],
-                    "provider_errors": [response_data.get("refusalReason", "")],
+                    "provider_errors": [response_data.get("message", "")],
                     "full_provider_response": response_data
                 }
 
-            # Transform the successful response to our format
-            return await self._transform_adyen_response(response_data, request)
-
         except KeyError as e:
             raise ValidationError(f"Missing required field: {str(e)}")
-        except requests.exceptions.RequestException as e:
-            raise APIError(f"API request failed: {str(e)}")
+        except Exception as e:
+            raise ProcessingError(f"Error processing transaction: {str(e)}")
