@@ -1,6 +1,19 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
+from typing import Optional, Any, Dict
+from datetime import datetime
+
+
+class TransactionStatusCode(str, Enum):
+    AUTHORIZED = "Authorized"
+    PENDING = "Pending"
+    CARD_VERIFIED = "Card Verified"
+    DECLINED = "Declined"
+    RETRY_SCHEDULED = "Retry Scheduled"
+    CANCELLED = "Cancelled"
+    CHALLENGE_SHOPPER = "ChallengeShopper"
+    RECEIVED = "Received"
+    PARTIALLY_AUTHORIZED = "PartiallyAuthorised"
 
 
 class RecurringType(str, Enum):
@@ -71,4 +84,42 @@ class TransactionRequest:
     type: Optional[RecurringType] = None
     customer: Optional[Customer] = None
     statement_description: Optional[StatementDescription] = None
-    three_ds: Optional[ThreeDS] = None 
+    three_ds: Optional[ThreeDS] = None
+
+
+# Response Models
+@dataclass
+class TransactionStatus:
+    code: TransactionStatusCode
+    provider_code: str
+
+
+@dataclass
+class TransactionThreeDS:
+    downgraded: bool
+    enrolled: Optional[str] = None
+    eci: Optional[str] = None
+
+
+@dataclass
+class ProvisionedSource:
+    id: str
+
+
+@dataclass
+class TransactionSource:
+    type: str
+    id: str
+    provisioned: Optional[ProvisionedSource] = None
+
+
+@dataclass
+class TransactionResponse:
+    id: str
+    reference: str
+    amount: Amount
+    status: TransactionStatus
+    source: TransactionSource
+    full_provider_response: Dict[str, Any]
+    created_at: datetime
+    three_ds: Optional[TransactionThreeDS] = None 

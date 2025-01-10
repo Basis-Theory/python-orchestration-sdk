@@ -6,8 +6,10 @@ from ..models import (
     TransactionRequest,
     Source,
     SourceType,
-    RecurringType
+    RecurringType,
+    TransactionStatusCode
 )
+from datetime import datetime
 
 
 RECURRING_TYPE_MAPPING = {
@@ -18,12 +20,28 @@ RECURRING_TYPE_MAPPING = {
 }
 
 
+STATUS_CODE_MAPPING = {
+    "Authorised": TransactionStatusCode.AUTHORIZED,
+    "Pending": TransactionStatusCode.PENDING,
+    "Error": TransactionStatusCode.DECLINED,
+    "Refused": TransactionStatusCode.DECLINED,
+    "Cancelled": TransactionStatusCode.CANCELLED,
+    "ChallengeShopper": TransactionStatusCode.CHALLENGE_SHOPPER,
+    "Received": TransactionStatusCode.RECEIVED,
+    "PartiallyAuthorised": TransactionStatusCode.PARTIALLY_AUTHORIZED
+}
+
+
 class AdyenClient:
     def __init__(self, api_key: str, merchant_account: str, is_test: bool, bt_api_key: str):
         self.api_key = api_key
         self.merchant_account = merchant_account
         self.base_url = "https://checkout-test.adyen.com/v70" if is_test else "https://checkout-live.adyen.com/v70"
         self.request_client = RequestClient(bt_api_key)
+
+    def _get_status_code(self, adyen_result_code: str) -> TransactionStatusCode:
+        """Map Adyen result code to our status code."""
+        return STATUS_CODE_MAPPING.get(adyen_result_code, TransactionStatusCode.DECLINED)
 
     def _validate_required_fields(self, data: Dict[str, Any]) -> None:
         if 'amount' not in data or 'value' not in data['amount']:
@@ -131,6 +149,35 @@ class AdyenClient:
 
         return payload
 
+    async def _transform_adyen_response(self, response_data: Dict[str, Any], request: TransactionRequest) -> Dict[str, Any]:
+        """Transform Adyen response to our standardized format."""
+        return {
+            "id": response_data["pspReference"],
+            "reference": response_data["merchantReference"],
+            "amount": {
+                "value": response_data["amount"]["value"],
+                "currency": response_data["amount"]["currency"]
+            },
+            "status": {
+                "code": self._get_status_code(response_data["resultCode"]),
+                "provider_code": response_data["resultCode"]
+            },
+            "source": {
+                "type": request.source.type,
+                "id": request.source.id,
+                "provisioned": {
+                    "id": response_data.get("additionalData", {}).get("PaymentAccountReference", "")
+                } if response_data.get("additionalData", {}).get("PaymentAccountReference") else None
+            },
+            "three_ds": {
+                "downgraded": response_data.get("additionalData", {}).get("scaExemptionRequested") == "transactionRiskAnalysis",
+                "enrolled": None,  # Adyen doesn't provide this in the initial response
+                "eci": response_data.get("additionalData", {}).get("eci")
+            } if "additionalData" in response_data else None,
+            "full_provider_response": response_data,
+            "created_at": datetime.utcnow().isoformat() + "Z"
+        }
+
     async def transaction(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process a payment transaction through Adyen's API directly or via Basis Theory's proxy."""
         try:
@@ -159,7 +206,9 @@ class AdyenClient:
 
             print(response.json())
             response.raise_for_status()
-            return response.json()
+            
+            # Transform the response to our format
+            return await self._transform_adyen_response(response.json(), request)
 
         except KeyError as e:
             raise ValidationError(f"Missing required field: {str(e)}")
