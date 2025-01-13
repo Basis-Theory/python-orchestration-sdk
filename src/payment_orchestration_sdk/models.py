@@ -68,6 +68,7 @@ class ErrorType(Enum):
     PROCESSOR_BLOCKED = ("processor_blocked", ErrorCategory.PROCESSING_ERROR)
     INVALID_API_KEY = ("invalid_api_key", ErrorCategory.AUTHENTICATION_ERROR)
     UNAUTHORIZED = ("unauthorized", ErrorCategory.AUTHENTICATION_ERROR)
+    CONFIGURATION_ERROR = ("configuration_error", ErrorCategory.OTHER)
     BT_UNAUTHENTICATED = ("unauthenticated", ErrorCategory.BASIS_THEORY_ERROR)
     BT_UNAUTHORIZED = ("unauthorized", ErrorCategory.BASIS_THEORY_ERROR)
     BT_REQUEST_ERROR = ("request_error", ErrorCategory.BASIS_THEORY_ERROR)

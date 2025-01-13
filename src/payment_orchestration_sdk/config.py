@@ -9,7 +9,6 @@ class AdyenConfig:
 @dataclass
 class CheckoutConfig:
     private_key: str
-    public_key: str
     processing_channel: Optional[str] = None
 
 @dataclass
