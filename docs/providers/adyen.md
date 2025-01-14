@@ -14,6 +14,7 @@ sdk = PaymentOrchestrationSDK.init({
         'adyen': {
             'apiKey': os.environ['ADYEN_API_KEY'],
             'merchantAccount': os.environ['ADYEN_MERCHANT_ACCOUNT'],
+            'productionPrefix': os.environ['ADYEN_PRODUCTION_PREFIX']
         }
     }
 })
@@ -21,8 +22,12 @@ sdk = PaymentOrchestrationSDK.init({
 
 ## Required Credentials
 
-1. **Adyen API Key**: Your Adyen API key for authentication
-2. **Merchant Account**: Your Adyen merchant account identifier
+| Credential | Property Name | Description |
+|------------|--------------|-------------|
+| Adyen API Key | apiKey | Your Adyen API key for authentication |
+| Merchant Account | merchantAccount | Your Adyen merchant account identifier |
+| Production Prefix | productionPrefix | Your Adyen production prefix |
+
 
 You can obtain these credentials from your [Adyen Customer Area](https://ca-test.adyen.com/ca/ca/overview/default.shtml).
 
