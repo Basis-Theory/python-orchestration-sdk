@@ -3,14 +3,16 @@
 This guide explains how to process different types of payments using the Payment Orchestration SDK.
 
 ## Table of Contents
-
-- [One-Time Payments](#one-time-payments)
+- [Customer Initiated Transactions (CIT)](#customer-initiated-transactions)
+- [Merchant Initiated Transactions (MIT)](#merchant-initiated-transactions)
 - [Card-on-File Payments](#card-on-file-payments)
 - [3DS Authentication](#3ds-authentication)
 - [Using Token Intents](#using-token-intents)
 - [Using Processor Tokens](#using-processor-tokens)
 
-## One-Time Payments
+## Customer Initiated Transactions (CIT)
+
+### One-Time Payments
 
 For one-time payments where you don't want to store the card for future use:
 
@@ -19,10 +21,10 @@ transaction_request = {
     'reference': 'unique-transaction-reference',
     'type': RecurringType.ONE_TIME,
     'amount': {
-        'value': 1000,  # Amount in cents
+        'value': 1000,
         'currency': 'USD'
     },
-    'source': {
+    'source': { # or 'basis_theory_token_intent'
         'type': 'basis_theory_token',
         'id': 'YOUR_BASIS_THEORY_TOKEN_ID',
         'store_with_provider': False
@@ -35,19 +37,19 @@ transaction_request = {
 response = await sdk.adyen.transaction(transaction_request)
 ```
 
-## Card-on-File Payments
+### $0 Authentication
 
 Transact and store a card for future use with a provider (card on file):
 
 ```python
 transaction_request = {
     'reference': 'unique-transaction-reference',
-    'type': RecurringType.UNSCHEDULED,
+    'type': RecurringType.CARD_ON_FILE,
     'amount': {
-        'value': 1000,
+        'value': 0,
         'currency': 'USD'
     },
-    'source': {
+    'source': { # or 'processor_token' or 'basis_theory_token_intent'
         'type': 'basis_theory_token',
         'id': 'YOUR_BASIS_THEORY_TOKEN_ID',
         'store_with_provider': True,
@@ -69,14 +71,111 @@ transaction_request = {
 }
 
 response = await sdk.adyen.transaction(transaction_request)
+```
 
-# The response will include a provisioned source that can be used for future payments
-processor_token = response['source']['provisioned']['id']
+### Card-on-File Payments
+
+Transact and store a card for future use with a provider (card on file):
+
+```python
+transaction_request = {
+    'reference': 'unique-transaction-reference',
+    'type': RecurringType.CARD_ON_FILE,
+    'amount': {
+        'value': 1000,
+        'currency': 'USD'
+    },
+    'source': { # or 'processor_token' or 'basis_theory_token_intent'
+        'type': 'basis_theory_token',
+        'id': 'YOUR_BASIS_THEORY_TOKEN_ID',
+        'store_with_provider': True,
+        'holderName': 'John Doe'
+    },
+    'customer': {
+        'reference': 'customer-reference',
+        'first_name': 'John',
+        'last_name': 'Doe',
+        'email': 'john.doe@example.com',
+        'address': {
+            'address_line1': '123 Main St',
+            'city': 'New York',
+            'state': 'NY',
+            'zip': '10001',
+            'country': 'US'
+        }
+    }
+}
+
+response = await sdk.adyen.transaction(transaction_request)
+```
+
+### First subscription / unscheduled payment
+
+For the first subscription payment when a customer is adding a new card for the first time:
+```python
+transaction_request = {
+    'reference': 'unique-transaction-reference',
+    'type': RecurringType.SUBSCRIPTION, # or RecurringType.UNSCHEDULED
+    'amount': {
+        'value': 1000,
+        'currency': 'USD'
+    },
+    'source': { # or 'processor_token' or 'basis_theory_token_intent'
+        'type': 'basis_theory_token',
+        'id': 'YOUR_BASIS_THEORY_TOKEN_ID',
+        'store_with_provider': True,
+        'holderName': 'John Doe'
+    },
+    'customer': {
+        'reference': 'customer-reference',
+        'first_name': 'John',
+        'last_name': 'Doe',
+        'email': 'john.doe@example.com',
+        'address': {
+            'address_line1': '123 Main St',
+            'city': 'New York',
+            'state': 'NY',
+            'zip': '10001',
+            'country': 'US'
+        }
+    }
+}
+
+response = await sdk.adyen.transaction(transaction_request)
+```
+
+## Merchant Initiated Transactions (MIT)
+
+### Charge with On-file PAN
+
+Charge a card for a subscription payment: 
+
+```python
+transaction_request = {
+    'reference': 'unique-transaction-reference',
+    'type': RecurringType.SUBSCRIPTION, # or RecurringType.UNSCHEDULED
+    'merchant_initiated': True,
+    'amount': {
+        'value': 1000,
+        'currency': 'USD'
+    },
+    'source': { # or 'processor_token' or 'basis_theory_token_intent'
+        'type': 'basis_theory_token',
+        'id': 'YOUR_BASIS_THEORY_TOKEN_ID',
+        'store_with_provider': True,
+        'holderName': 'John Doe'
+    },
+    'customer': {
+        'reference': 'customer-reference',
+    }
+}
+
+response = await sdk.adyen.transaction(transaction_request)
 ```
 
 ## 3DS Authentication
 
-How to pass third party authentication data to a provider:
+When using a third party 3DS provider, the values will be sent in the `three_ds` field:
 
 ```python
 transaction_request = {
@@ -107,30 +206,9 @@ response = await sdk.adyen.transaction(transaction_request)
 
 ## Using Basis Theory Token Intents
 
-Transact with a token intent:
+When using a Basis Theory token intent, you'll pass in the value of the token intent in the `source` field:
 
 ```python
-# First, create a token intent
-import requests
-
-url = "https://api.basistheory.com/token-intents"
-headers = {
-    "BT-API-KEY": "YOUR_BASIS_THEORY_API_KEY",
-    "Content-Type": "application/json"
-}
-payload = {
-    "type": "card",
-    "data": {
-        "number": "4111111145551142",
-        "expiration_month": "03",
-        "expiration_year": "2030",
-        "cvc": "737"
-    }
-}
-
-response = requests.post(url, headers=headers, json=payload)
-token_intent_id = response.json()['id']
-
 # Then use the token intent in a transaction
 transaction_request = {
     'reference': 'unique-transaction-reference',
@@ -179,37 +257,13 @@ response = await sdk.adyen.transaction(transaction_request)
 
 ## Response Handling
 
-All transaction responses include:
+We strongly suggest you store the following fields in your database:
 
-- Transaction ID and reference
-- Amount and currency
-- Transaction status and provider code
-- Source information (including provisioned token if stored)
-- Full provider response for debugging
-- Network transaction ID
+- Basis Theory Token Id
+    -  If you haven't already stored this token in your database, you should do so now.
+- Processor Token (`source.provisioned.id`)
+    - This ID ensures a merchant is capable of charging directly with a processor without dependence on Basis Theory
+- Network Transaction Id (`networkTransactionId`)
+    - This ID ensures the network (Visa, Mastercard, etc) can correlate a merchant's charges when they utilize a multi-processor strategy.
 
-Example successful response:
-```python
-{
-    'id': 'transaction-id',
-    'reference': 'your-reference',
-    'amount': {
-        'value': 1000,
-        'currency': 'USD'
-    },
-    'status': {
-        'code': TransactionStatusCode.AUTHORIZED,
-        'provider_code': 'Authorised'
-    },
-    'source': {
-        'type': 'basis_theory_token',
-        'id': 'token-id',
-        'provisioned': {
-            'id': 'processor-token'  # Only present if store_with_provider was True
-        }
-    },
-    'networkTransactionId': 'network-transaction-id',
-    'full_provider_response': {
-        # Raw provider response
-    }
-} 
+Find the full response model [here](./api-reference.md#transactionresponse).
