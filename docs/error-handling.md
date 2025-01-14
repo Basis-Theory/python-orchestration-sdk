@@ -23,6 +23,23 @@ When a transaction fails, the SDK returns an error response with the following s
 }
 ```
 
+### ErrorResponse
+
+```python
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| error_codes | list[ErrorCode] | None | List of error codes indicating what went wrong |
+| provider_errors | list[str] | None | List of raw error messages from the provider |
+| full_provider_response | Dict[str, Any] | None | Complete response from the provider for debugging |
+
+### ErrorCode
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| category | str | None | The error category (e.g. "authentication_error", "payment_method_error") |
+| code | str | None | The specific error code within the category |
+
+
 ## Error Categories
 
 The SDK standardizes errors into the following categories:
