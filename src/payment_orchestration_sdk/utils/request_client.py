@@ -71,7 +71,6 @@ class RequestClient:
                 json=data
             )
 
-            print(f"is_bt_error: {self._is_bt_error(response)}")
             # Check for BT errors first
             if not response.ok and self._is_bt_error(response):
                 error_response = self._transform_bt_error(response)
@@ -82,7 +81,7 @@ class RequestClient:
 
         else:
             request_url = url
-            
+
             # Make the request
             response = requests.request(
                 method=method,

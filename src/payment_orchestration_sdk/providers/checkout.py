@@ -184,14 +184,10 @@ class CheckoutClient:
             if request.three_ds.version:
                 payload["3ds"]["version"] = request.three_ds.version
 
-
-        print(f"payload: {payload}")
-
         return payload
 
     async def _transform_checkout_response(self, response_data: Dict[str, Any], request: TransactionRequest) -> Dict[str, Any]:
         """Transform Checkout.com response to our standardized format."""
-        print(f"response_data: {response_data}")
         return {
             "id": response_data["id"],
             "reference": response_data["reference"],
@@ -224,10 +220,7 @@ class CheckoutClient:
     def _transform_error_response(self, response, error_data=None):
         """Transform error response from Checkout.com to SDK format."""
         error_codes = []
-
-        print(f"error_data: {error_data}")
-        print(f"response: {response}")
-
+        
         if response.status_code == 401:
             error_codes.append(self._get_error_code(ErrorType.INVALID_API_KEY))
         elif response.status_code == 403:
