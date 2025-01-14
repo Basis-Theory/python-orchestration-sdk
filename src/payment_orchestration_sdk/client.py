@@ -1,6 +1,7 @@
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
 from .providers.adyen import AdyenClient
+from .providers.checkout import CheckoutClient
 from .exceptions import ConfigurationError
 
 
@@ -13,8 +14,7 @@ class AdyenConfig:
 @dataclass
 class CheckoutConfig:
     private_key: str
-    public_key: str
-    processing_channel: Optional[str] = None
+    processing_channel: str
 
 
 @dataclass
@@ -64,9 +64,8 @@ class PaymentOrchestrationSDK:
             checkout_config = provider_config['checkout']
             cls._instance.provider_config = ProviderConfig(
                 checkout=CheckoutConfig(
-                    private_key=checkout_config['privateKey'],
-                    public_key=checkout_config['publicKey'],
-                    processing_channel=checkout_config.get('processingChannel')
+                    private_key=checkout_config['private_key'],
+                    processing_channel=checkout_config.get('processing_channel')
                 )
             )
 
@@ -88,6 +87,19 @@ class PaymentOrchestrationSDK:
         return AdyenClient(
             api_key=self.provider_config.adyen.api_key,
             merchant_account=self.provider_config.adyen.merchant_account,
+            is_test=self.is_test,
+            bt_api_key=self.bt_api_key
+        )
+
+    @property
+    def checkout(self) -> CheckoutClient:
+        """Get the Checkout client instance."""
+        if not self.provider_config or not self.provider_config.checkout:
+            raise ConfigurationError("Checkout is not configured")
+
+        return CheckoutClient(
+            private_key=self.provider_config.checkout.private_key,
+            processing_channel=self.provider_config.checkout.processing_channel,
             is_test=self.is_test,
             bt_api_key=self.bt_api_key
         )

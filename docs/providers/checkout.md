@@ -1,19 +1,19 @@
-# Adyen Provider
+# Checkout.com Provider
 
-This guide explains how to use Adyen as a payment provider with the Payment Orchestration SDK.
+This guide explains how to use Checkout.com as a payment provider with the Payment Orchestration SDK.
 
 ## Configuration
 
-Configure Adyen in the SDK initialization:
+Configure Checkout.com in the SDK initialization:
 
 ```python
 sdk = PaymentOrchestrationSDK.init({
     'isTest': True,  # Set to False for production
     'btApiKey': os.environ['BASISTHEORY_API_KEY'],
     'providerConfig': {
-        'adyen': {
-            'apiKey': os.environ['ADYEN_API_KEY'],
-            'merchantAccount': os.environ['ADYEN_MERCHANT_ACCOUNT'],
+        'checkout': {
+            'private_key': os.environ['CHECKOUT_PRIVATE_KEY'],
+            'processing_channel': os.environ['CHECKOUT_PROCESSING_CHANNEL']  # Optional
         }
     }
 })
@@ -21,25 +21,25 @@ sdk = PaymentOrchestrationSDK.init({
 
 ## Required Credentials
 
-1. **Adyen API Key**: Your Adyen API key for authentication
-2. **Merchant Account**: Your Adyen merchant account identifier
+1. **Checkout.com Private Key**: Your Checkout.com secret key for authentication
+2. **Processing Channel ID**: (Optional) Your Checkout.com processing channel identifier
 
-You can obtain these credentials from your [Adyen Customer Area](https://ca-test.adyen.com/ca/ca/overview/default.shtml).
+You can obtain these credentials from your [Checkout.com Dashboard](https://dashboard.checkout.com/).
 
 ## Test Cards
 
-For testing, use these Adyen test card numbers:
+For testing, use these Checkout.com test card numbers:
 
-- **Regular Card**: 4111111145551142
-- **3DS Card**: 4917610000000000
-- **Expired Card**: Use any valid card number with `holderName: "CARD_EXPIRED"`
+- **Visa**: 4242424242424242
+- **Mastercard**: 5555555555554444
+- **American Express**: 378282246310005
 
 ## Processing Payments
 
 ### One-Time Payment
 
 ```python
-response = await sdk.adyen.transaction({
+response = await sdk.checkout.transaction({
     'reference': str(uuid.uuid4()),
     'type': RecurringType.ONE_TIME,
     'amount': {
@@ -57,7 +57,7 @@ response = await sdk.adyen.transaction({
 ### Card-on-File Payment
 
 ```python
-response = await sdk.adyen.transaction({
+response = await sdk.checkout.transaction({
     'reference': str(uuid.uuid4()),
     'type': RecurringType.UNSCHEDULED,
     'amount': {
@@ -69,6 +69,19 @@ response = await sdk.adyen.transaction({
         'id': token_id,
         'store_with_provider': True,
         'holderName': 'John Doe'
+    },
+    'customer': {
+        'reference': str(uuid.uuid4()),
+        'first_name': 'John',
+        'last_name': 'Doe',
+        'email': 'john.doe@example.com',
+        'address': {
+            'address_line1': '123 Main St',
+            'city': 'New York',
+            'state': 'NY',
+            'zip': '10001',
+            'country': 'US'
+        }
     }
 })
 
@@ -79,7 +92,7 @@ processor_token = response['source']['provisioned']['id']
 ### 3DS Payment
 
 ```python
-response = await sdk.adyen.transaction({
+response = await sdk.checkout.transaction({
     'reference': str(uuid.uuid4()),
     'type': RecurringType.ONE_TIME,
     'amount': {
@@ -102,7 +115,7 @@ response = await sdk.adyen.transaction({
 ### Using Stored Cards
 
 ```python
-response = await sdk.adyen.transaction({
+response = await sdk.checkout.transaction({
     'reference': str(uuid.uuid4()),
     'type': RecurringType.UNSCHEDULED,
     'merchant_initiated': True,
@@ -117,6 +130,7 @@ response = await sdk.adyen.transaction({
 })
 ```
 
+
 ## Environment Support
 
 ### Test Environment
@@ -125,9 +139,9 @@ response = await sdk.adyen.transaction({
 sdk = PaymentOrchestrationSDK.init({
     'isTest': True,
     'providerConfig': {
-        'adyen': {
-            'apiKey': 'YOUR_TEST_ADYEN_API_KEY',
-            'merchantAccount': 'YOUR_TEST_MERCHANT_ACCOUNT',
+        'checkout': {
+            'private_key': 'YOUR_TEST_CHECKOUT_PRIVATE_KEY',
+            'processing_channel': 'YOUR_TEST_PROCESSING_CHANNEL'
         }
     }
 })
@@ -139,9 +153,9 @@ sdk = PaymentOrchestrationSDK.init({
 sdk = PaymentOrchestrationSDK.init({
     'isTest': False,
     'providerConfig': {
-        'adyen': {
-            'apiKey': 'YOUR_PRODUCTION_ADYEN_API_KEY',
-            'merchantAccount': 'YOUR_PRODUCTION_MERCHANT_ACCOUNT',
+        'checkout': {
+            'private_key': 'YOUR_PRODUCTION_CHECKOUT_PRIVATE_KEY',
+            'processing_channel': 'YOUR_PRODUCTION_PROCESSING_CHANNEL'
         }
     }
 })
