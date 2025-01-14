@@ -62,25 +62,34 @@ class RequestClient:
                 headers["BT-PROXY-URL"] = url
             # Use the BT proxy endpoint
             request_url = "https://api.basistheory.com/proxy"
+
+
+            response = requests.request(
+                method=method,
+                url=request_url,
+                headers=headers,
+                json=data
+            )
+
+            print(f"is_bt_error: {self._is_bt_error(response)}")
+            # Check for BT errors first
+            if not response.ok and self._is_bt_error(response):
+                error_response = self._transform_bt_error(response)
+                # Raise an HTTPError with the transformed error response
+                error = requests.exceptions.HTTPError(response=response)
+                error.bt_error_response = error_response
+                raise error
+
         else:
             request_url = url
-
-        # Make the request
-        response = requests.request(
-            method=method,
-            url=request_url,
-            headers=headers,
-            json=data
-        )
-
-        print(f"is_bt_error: {self._is_bt_error(response)}")
-        # Check for BT errors first
-        if not response.ok and self._is_bt_error(response):
-            error_response = self._transform_bt_error(response)
-            # Raise an HTTPError with the transformed error response
-            error = requests.exceptions.HTTPError(response=response)
-            error.bt_error_response = error_response
-            raise error
+            
+            # Make the request
+            response = requests.request(
+                method=method,
+                url=request_url,
+                headers=headers,
+                json=data
+            )
 
         # Raise for other HTTP errors
         response.raise_for_status()

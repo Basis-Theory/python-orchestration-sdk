@@ -48,6 +48,7 @@ class ErrorType(Enum):
     EXPIRED_CARD = ("expired_card", ErrorCategory.PAYMENT_METHOD_ERROR)
     INVALID_AMOUNT = ("invalid_amount", ErrorCategory.OTHER)
     INVALID_CARD = ("invalid_card", ErrorCategory.PAYMENT_METHOD_ERROR)
+    INVALID_SOURCE_TOKEN = ("invalid_source_token", ErrorCategory.PAYMENT_METHOD_ERROR)
     OTHER = ("other", ErrorCategory.OTHER)
     NOT_SUPPORTED = ("not_supported", ErrorCategory.PROCESSING_ERROR)
     AUTHENTICATION_FAILURE = ("authentication_failure", ErrorCategory.PAYMENT_METHOD_ERROR)

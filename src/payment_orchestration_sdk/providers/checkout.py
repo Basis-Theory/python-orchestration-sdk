@@ -45,11 +45,11 @@ ERROR_CODE_MAPPING = {
     "card_authorization_failed": ErrorType.REFUSED,
     "card_disabled": ErrorType.BLOCKED_CARD,
     "card_expired": ErrorType.EXPIRED_CARD,
-    "card_expiry_month_invalid": ErrorType.EXPIRED_CARD,
-    "card_expiry_month_required": ErrorType.EXPIRED_CARD,
-    "card_expiry_year_invalid": ErrorType.EXPIRED_CARD,
-    "card_expiry_year_required": ErrorType.EXPIRED_CARD,
-    "expiry_date_format_invalid": ErrorType.EXPIRED_CARD,
+    "card_expiry_month_invalid": ErrorType.INVALID_CARD,
+    "card_expiry_month_required": ErrorType.INVALID_CARD,
+    "card_expiry_year_invalid": ErrorType.INVALID_CARD,
+    "card_expiry_year_required": ErrorType.INVALID_CARD,
+    "expiry_date_format_invalid": ErrorType.INVALID_CARD,
     "card_not_found": ErrorType.INVALID_CARD,
     "card_number_invalid": ErrorType.INVALID_CARD,
     "card_number_required": ErrorType.INVALID_CARD,
@@ -87,7 +87,9 @@ ERROR_CODE_MAPPING = {
     "capture_value_greater_than_remaining_authorized": ErrorType.OTHER,
     "card_holder_invalid": ErrorType.OTHER,
     "previous_payment_id_invalid": ErrorType.OTHER,
-    "processing_channel_id_required": ErrorType.CONFIGURATION_ERROR
+    "processing_channel_id_required": ErrorType.CONFIGURATION_ERROR,
+    "success_url_required": ErrorType.CONFIGURATION_ERROR,
+    "source_token_invalid": ErrorType.INVALID_SOURCE_TOKEN
 }
 
 
@@ -110,14 +112,15 @@ class CheckoutClient:
             "currency": request.amount.currency,
             "merchant_initiated": request.merchant_initiated,
             "payment_type": RECURRING_TYPE_MAPPING.get(request.type),
-            "processing_channel_id": self.processing_channel
+            "processing_channel_id": self.processing_channel,
+            "reference": request.reference
         }
 
         # Process source based on type
         if request.source.type == SourceType.PROCESSOR_TOKEN:
             payload["source"] = {
-                "type": "token",
-                "token": request.source.id
+                "type": "id",
+                "id": request.source.id
             }
         elif request.source.type in [SourceType.BASIS_THEORY_TOKEN, SourceType.BASIS_THEORY_TOKEN_INTENT]:
             # Add card data with Basis Theory expressions
@@ -188,13 +191,13 @@ class CheckoutClient:
 
     async def _transform_checkout_response(self, response_data: Dict[str, Any], request: TransactionRequest) -> Dict[str, Any]:
         """Transform Checkout.com response to our standardized format."""
-        print(response_data["processed_on"])
+        print(f"response_data: {response_data}")
         return {
             "id": response_data["id"],
-            "reference": request.reference,
+            "reference": response_data["reference"],
             "amount": {
-                "value": request.amount.value,
-                "currency": request.amount.currency
+                "value": response_data["amount"],
+                "currency": response_data["currency"]
             },
             "status": {
                 "code": self._get_status_code(response_data["status"]),
@@ -208,7 +211,8 @@ class CheckoutClient:
                 } if response_data.get("source", {}).get("id") else None
             },
             "full_provider_response": response_data,
-            "created_at": datetime.fromisoformat(response_data["processed_on"].split(".")[0] + "+00:00").isoformat("T", "milliseconds") if response_data.get("processed_on") else None
+            "created_at": datetime.fromisoformat(response_data["processed_on"].split(".")[0] + "+00:00").isoformat("T", "milliseconds") if response_data.get("processed_on") else None,
+            "networkTransactionId": response_data.get("processing", {}).get("acquirer_transaction_id")
         }
 
     def _get_error_code(self, error: ErrorType) -> Dict[str, Any]:
@@ -220,6 +224,9 @@ class CheckoutClient:
     def _transform_error_response(self, response, error_data=None):
         """Transform error response from Checkout.com to SDK format."""
         error_codes = []
+
+        print(f"error_data: {error_data}")
+        print(f"response: {response}")
 
         if response.status_code == 401:
             error_codes.append(self._get_error_code(ErrorType.INVALID_API_KEY))
@@ -237,7 +244,7 @@ class CheckoutClient:
         
         return {
             "error_codes": error_codes,
-            "provider_errors":error_data.get('error_codes', []),
+            "provider_errors": error_data.get('error_codes', []) if error_data else [],
             "full_provider_response": error_data
         }
 
@@ -269,8 +276,13 @@ class CheckoutClient:
             # Check if this is a BT error
             if hasattr(e, 'bt_error_response'):
                 return e.bt_error_response
+            
+            try:
+                error_data = e.response.json()
+            except:
+                error_data = None
 
-            return self._transform_error_response(e.response, e.response.json())
+            return self._transform_error_response(e.response, error_data)
 
         # Transform response to SDK format
         return await self._transform_checkout_response(response.json(), request)
