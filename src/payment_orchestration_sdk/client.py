@@ -9,6 +9,7 @@ from .exceptions import ConfigurationError
 class AdyenConfig:
     api_key: str
     merchant_account: str
+    production_prefix: Optional[str] = ""
 
 
 @dataclass
@@ -55,7 +56,8 @@ class PaymentOrchestrationSDK:
             cls._instance.provider_config = ProviderConfig(
                 adyen=AdyenConfig(
                     api_key=adyen_config['apiKey'],
-                    merchant_account=adyen_config['merchantAccount']
+                    merchant_account=adyen_config['merchantAccount'],
+                    production_prefix=adyen_config.get('productionPrefix')
                 )
             )
 
@@ -88,7 +90,8 @@ class PaymentOrchestrationSDK:
             api_key=self.provider_config.adyen.api_key,
             merchant_account=self.provider_config.adyen.merchant_account,
             is_test=self.is_test,
-            bt_api_key=self.bt_api_key
+            bt_api_key=self.bt_api_key,
+            production_prefix=self.provider_config.adyen.production_prefix
         )
 
     @property

@@ -5,6 +5,7 @@ from typing import Optional
 class AdyenConfig:
     api_key: str
     merchant_account: str
+    production_prefix: Optional[str] = ""
 
 @dataclass
 class CheckoutConfig:

@@ -91,10 +91,10 @@ ERROR_CODE_MAPPING = {
 
 
 class AdyenClient:
-    def __init__(self, api_key: str, merchant_account: str, is_test: bool, bt_api_key: str):
+    def __init__(self, api_key: str, merchant_account: str, is_test: bool, bt_api_key: str, production_prefix: str):
         self.api_key = api_key
         self.merchant_account = merchant_account
-        self.base_url = "https://checkout-test.adyen.com/v71" if is_test else "https://checkout-live.adyen.com/v71"
+        self.base_url = "https://checkout-test.adyen.com/v71" if is_test else f"https://{production_prefix}-checkout-live.adyenpayments.com/checkout/v71"
         self.request_client = RequestClient(bt_api_key)
 
     def _get_status_code(self, adyen_result_code: str) -> TransactionStatusCode:
@@ -180,8 +180,7 @@ class AdyenClient:
                     if address.zip:
                         payload["billingAddress"]["postalCode"] = address.zip
 
-                    # Set country to ZZ if address exists but no country specified
-                    payload["billingAddress"]["country"] = address.country or "ZZ"
+                    payload["billingAddress"]["country"] = address.country
 
         # Map statement description (only name, city is not mapped as per CSV)
         if request.statement_description and request.statement_description.name:
