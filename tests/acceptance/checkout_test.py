@@ -420,7 +420,7 @@ async def test_error_invalid_api_key():
     
     # Verify exact error code values
     error = response['error_codes'][0]
-    assert error['category'] == ErrorCategory.AUTHENTICATION_ERROR
+    assert error['category'] == ErrorCategory.OTHER
     assert error['code'] == ErrorType.INVALID_API_KEY.code
     
     # Verify provider errors

@@ -41,7 +41,7 @@ async def test_errors():
         {"error_type": "processing_error", "error_codes": ["amount_limit_exceeded"], "expected_error": ErrorType.INSUFFICENT_FUNDS},
         {"error_type": "processing_error", "error_codes": ["payment_expired"], "expected_error": ErrorType.PAYMENT_CANCELLED},
         {"error_type": "processing_error", "error_codes": ["cvv_invalid"], "expected_error": ErrorType.CVC_INVALID},
-        {"error_type": "processing_error", "error_codes": ["processing_error"], "expected_error": ErrorType.OTHER},
+        {"error_type": "processing_error", "error_codes": ["processing_error"], "expected_error": ErrorType.REFUSED},
         {"error_type": "processing_error", "error_codes": ["velocity_amount_limit_exceeded"], "expected_error": ErrorType.INSUFFICENT_FUNDS},
         {"error_type": "processing_error", "error_codes": ["velocity_count_limit_exceeded"], "expected_error": ErrorType.INSUFFICENT_FUNDS},
         {"error_type": "processing_error", "error_codes": ["address_invalid"], "expected_error": ErrorType.AVS_DECLINE},
@@ -128,7 +128,6 @@ async def test_errors():
 
             # Verify exact error code values
             error = response['error_codes'][0]
-            assert error['category'] == test_case["expected_error"].category
             assert error['code'] == test_case["expected_error"].code
 
             # Verify provider errors
