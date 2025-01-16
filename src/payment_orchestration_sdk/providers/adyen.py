@@ -101,7 +101,7 @@ class AdyenClient:
         """Map Adyen result code to our status code."""
         return STATUS_CODE_MAPPING.get(adyen_result_code, TransactionStatusCode.DECLINED)
 
-    async def _transform_to_adyen_payload(self, request: TransactionRequest) -> Dict[str, Any]:
+    def _transform_to_adyen_payload(self, request: TransactionRequest) -> Dict[str, Any]:
         """Transform SDK request to Adyen payload format."""
         payload = {
             "amount": {
@@ -204,26 +204,26 @@ class AdyenClient:
 
         return payload
 
-    async def _transform_adyen_response(self, response_data: Dict[str, Any], request: TransactionRequest) -> Dict[str, Any]:
+    def _transform_adyen_response(self, response_data: Dict[str, Any], request: TransactionRequest) -> Dict[str, Any]:
         """Transform Adyen response to our standardized format."""
         return {
-            "id": response_data["pspReference"],
-            "reference": response_data["merchantReference"],
+            "id": response_data.get("pspReference"),
+            "reference": response_data.get("merchantReference"),
             "amount": {
-                "value": response_data["amount"]["value"],
-                "currency": response_data["amount"]["currency"]
+                "value": response_data.get("amount", {}).get("value"),
+                "currency": response_data.get("amount", {}).get("currency")
             },
             "status": {
-                "code": self._get_status_code(response_data["resultCode"]),
-                "provider_code": response_data["resultCode"]
+                "code": self._get_status_code(response_data.get("resultCode")),
+                "provider_code": response_data.get("resultCode")
             },
             "source": {
                 "type": request.source.type,
                 "id": request.source.id,
                 # checking both as recurringDetailReference is deprecated, although it still appears without storedPaymentMethodId
                 "provisioned": {
-                    "id": response_data.get("paymentMethod", {}).get("storedPaymentMethodId", "") or 
-                         response_data.get("additionalData", {}).get("recurring.recurringDetailReference", "")
+                    "id": response_data.get("paymentMethod", {}).get("storedPaymentMethodId") or 
+                         response_data.get("additionalData", {}).get("recurring.recurringDetailReference")
                 } if (response_data.get("paymentMethod", {}).get("storedPaymentMethodId") or 
                       response_data.get("additionalData", {}).get("recurring.recurringDetailReference")) else None
             },
@@ -273,7 +273,7 @@ class AdyenClient:
         request = create_transaction_request(request_data)
 
         # Transform to Adyen's format
-        payload = await self._transform_to_adyen_payload(request)
+        payload = self._transform_to_adyen_payload(request)
 
         # Set up common headers
         headers = {
@@ -304,4 +304,4 @@ class AdyenClient:
             return self._transform_error_response(response, response_data)
 
         # Transform the successful response to our format
-        return await self._transform_adyen_response(response_data, request)
+        return self._transform_adyen_response(response_data, request)
