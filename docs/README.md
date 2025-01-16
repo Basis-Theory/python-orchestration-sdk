@@ -5,12 +5,10 @@ The Payment Orchestration SDK is a Python library that simplifies payment proces
 ## Features
 
 - Unified payment processing interface
-- Secure card tokenization with Basis Theory
 - Support for multiple payment providers
 - Support for one-time payments and card-on-file transactions
 - 3DS authentication support
 - Comprehensive error handling and categorization
-- Type hints and dataclass models for better IDE support
 - [Providers](./providers/index.md) documentation for each provider supported by the SDK.
 
 ## Installation

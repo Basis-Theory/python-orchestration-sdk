@@ -4,7 +4,7 @@ This guide explains how to use Adyen as a payment provider with the Payment Orch
 
 ## Configuration
 
-Configure Adyen in the SDK initialization:
+Configure Adyen in the SDK initialization, for additional information on initializing the SDK see the [API Reference](../api-reference.md#sdk-initialization).
 
 ```python
 sdk = PaymentOrchestrationSDK.init({
@@ -33,121 +33,14 @@ You can obtain these credentials from your [Adyen Customer Area](https://ca-test
 
 ## Test Cards
 
-For testing, use these Adyen test card numbers:
+For testing, a few test card numbers are provided below, for a full list of test cards see the [Adyen Test Cards](https://docs.adyen.com/development-resources/testing/test-card-numbers/) and [Adyen Failure Cards](https://docs.adyen.com/development-resources/testing/result-codes/#values-for-testing-result-reasons).
 
-- **Regular Card**: 4111111145551142
-- **3DS Card**: 4917610000000000
-- **Expired Card**: Use any valid card number with `holderName: "CARD_EXPIRED"`
+| Card Type | Number | Notes |
+|-----------|---------|-------|
+| Regular Card | 4111111145551142 | Standard test card |
+| 3DS Card | 4917610000000000 | Card that triggers 3DS flow |
+| Expired Card | Any valid card number | Use with `holderName: "CARD_EXPIRED"` |
 
-## Processing Payments
+## Transactions
 
-### One-Time Payment
-
-```python
-response = await sdk.adyen.transaction({
-    'reference': str(uuid.uuid4()),
-    'type': RecurringType.ONE_TIME,
-    'amount': {
-        'value': 1000,
-        'currency': 'USD'
-    },
-    'source': {
-        'type': 'basis_theory_token',
-        'id': token_id,
-        'store_with_provider': False
-    }
-})
-```
-
-### Card-on-File Payment
-
-```python
-response = await sdk.adyen.transaction({
-    'reference': str(uuid.uuid4()),
-    'type': RecurringType.UNSCHEDULED,
-    'amount': {
-        'value': 1000,
-        'currency': 'USD'
-    },
-    'source': {
-        'type': 'basis_theory_token',
-        'id': token_id,
-        'store_with_provider': True,
-        'holderName': 'John Doe'
-    }
-})
-
-# Store the processor token for future use
-processor_token = response['source']['provisioned']['id']
-```
-
-### 3DS Payment
-
-```python
-response = await sdk.adyen.transaction({
-    'reference': str(uuid.uuid4()),
-    'type': RecurringType.ONE_TIME,
-    'amount': {
-        'value': 1000,
-        'currency': 'USD'
-    },
-    'source': {
-        'type': 'basis_theory_token',
-        'id': token_id
-    },
-    'three_ds': {
-        'eci': '05',
-        'authentication_value': 'YOUR_3DS_AUTH_VALUE',
-        'xid': 'YOUR_3DS_XID',
-        'version': '2.2.0'
-    }
-})
-```
-
-### Using Stored Cards
-
-```python
-response = await sdk.adyen.transaction({
-    'reference': str(uuid.uuid4()),
-    'type': RecurringType.UNSCHEDULED,
-    'merchant_initiated': True,
-    'amount': {
-        'value': 1000,
-        'currency': 'USD'
-    },
-    'source': {
-        'type': 'processor_token',
-        'id': 'PREVIOUSLY_STORED_PROCESSOR_TOKEN'
-    }
-})
-```
-
-## Environment Support
-
-### Test Environment
-
-```python
-sdk = PaymentOrchestrationSDK.init({
-    'isTest': True,
-    'providerConfig': {
-        'adyen': {
-            'apiKey': 'YOUR_TEST_ADYEN_API_KEY',
-            'merchantAccount': 'YOUR_TEST_MERCHANT_ACCOUNT',
-        }
-    }
-})
-```
-
-### Production Environment
-
-```python
-sdk = PaymentOrchestrationSDK.init({
-    'isTest': False,
-    'providerConfig': {
-        'adyen': {
-            'apiKey': 'YOUR_PRODUCTION_ADYEN_API_KEY',
-            'merchantAccount': 'YOUR_PRODUCTION_MERCHANT_ACCOUNT',
-        }
-    }
-})
-``` 
+You will use the `sdk.adyen.transaction()` method to process transactions following the [TransactionRequest](../api-reference.md#transactionrequest) model.
