@@ -32,7 +32,7 @@ ADYEN_MERCHANT_ACCOUNT=YOUR_MERCHANT_ACCOUNT  # If required by your provider
 ```python
 import os
 from dotenv import load_dotenv
-from payment_orchestration_sdk import PaymentOrchestrationSDK
+from orchestration_sdk import PaymentOrchestrationSDK
 
 # Load environment variables
 load_dotenv()
@@ -59,8 +59,8 @@ Here's a complete example of processing a payment:
 import os
 import uuid
 from dotenv import load_dotenv
-from payment_orchestration_sdk import PaymentOrchestrationSDK
-from payment_orchestration_sdk.models import RecurringType
+from orchestration_sdk import PaymentOrchestrationSDK
+from orchestration_sdk.models import RecurringType
 
 # Load environment variables
 load_dotenv()

@@ -8,8 +8,8 @@ from dotenv import load_dotenv
 from basistheory.api_client import ApiClient
 from basistheory.configuration import Configuration
 from basistheory.api.tokens_api import TokensApi
-from payment_orchestration_sdk import PaymentOrchestrationSDK
-from payment_orchestration_sdk.models import (
+from orchestration_sdk import PaymentOrchestrationSDK
+from orchestration_sdk.models import (
     TransactionResponse,
     TransactionStatus,
     TransactionSource,
