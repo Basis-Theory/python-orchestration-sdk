@@ -68,7 +68,7 @@ ERROR_CODE_MAPPING = {
     "24": ErrorType.CVC_INVALID,  # CVC Declined
     "25": ErrorType.RESTRICTED_CARD,  # Restricted Card
     "26": ErrorType.STOP_PAYMENT,  # Revocation Of Auth
-    "27": ErrorType.OTHER,  # Declined Non Generic
+    "27": ErrorType.REFUSED,  # Declined Non Generic
     "28": ErrorType.INSUFFICENT_FUNDS,  # Withdrawal amount exceeded
     "29": ErrorType.INSUFFICENT_FUNDS,  # Withdrawal count exceeded
     "31": ErrorType.FRAUD,  # Issuer Suspected Fraud
