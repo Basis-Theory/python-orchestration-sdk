@@ -4,8 +4,8 @@ import pytest
 import requests
 from datetime import datetime
 from unittest.mock import MagicMock, patch
-from payment_orchestration_sdk import PaymentOrchestrationSDK
-from payment_orchestration_sdk.models import (
+from orchestration_sdk import PaymentOrchestrationSDK
+from orchestration_sdk.models import (
     TransactionStatusCode,
     RecurringType,
     SourceType,

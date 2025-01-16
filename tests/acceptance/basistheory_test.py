@@ -4,8 +4,8 @@ import uuid
 import pytest
 from datetime import datetime
 from dotenv import load_dotenv
-from payment_orchestration_sdk import PaymentOrchestrationSDK
-from payment_orchestration_sdk.models import (
+from orchestration_sdk import PaymentOrchestrationSDK
+from orchestration_sdk.models import (
     TransactionResponse,
     TransactionStatus,
     TransactionSource,
