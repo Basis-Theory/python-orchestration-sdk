@@ -45,13 +45,13 @@ The SDK standardizes errors into the following categories:
 
 | Enum | Code | Description |
 |------|-------|-------------|
-| AUTHENTICATION_ERROR | "authentication_error" | Issues with API keys or authentication |
+| AUTHENTICATION_ERROR | "authentication_error" | Issues with 3DS authentication |
 | PAYMENT_METHOD_ERROR | "payment_method_error" | Issues with the payment method (card expired, invalid, etc.) |
 | PROCESSING_ERROR | "processing_error" | General processing errors |
 | VALIDATION_ERROR | "validation_error" | Invalid request data |
 | BASIS_THEORY_ERROR | "basis_theory_error" | Issues with Basis Theory services |
 | FRAUD_DECLINE | "Fraud Decline" | Transactions declined due to fraud |
-| OTHER | "Other" | Other unspecified errors |
+| OTHER | "Other" | Other unspecified errors (e.g. invalid API key) |
 
 ## Error Types
 
