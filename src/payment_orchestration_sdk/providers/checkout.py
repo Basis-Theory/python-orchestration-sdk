@@ -186,24 +186,24 @@ class CheckoutClient:
 
         return payload
 
-    async def _transform_checkout_response(self, response_data: Dict[str, Any], request: TransactionRequest) -> Dict[str, Any]:
+    def _transform_checkout_response(self, response_data: Dict[str, Any], request: TransactionRequest) -> Dict[str, Any]:
         """Transform Checkout.com response to our standardized format."""
         return {
-            "id": response_data["id"],
-            "reference": response_data["reference"],
+            "id": response_data.get("id"),
+            "reference": response_data.get("reference"),
             "amount": {
-                "value": response_data["amount"],
-                "currency": response_data["currency"]
+                "value": response_data.get("amount"),
+                "currency": response_data.get("currency")
             },
             "status": {
-                "code": self._get_status_code(response_data["status"]),
-                "provider_code": response_data["status"]
+                "code": self._get_status_code(response_data.get("status")),
+                "provider_code": response_data.get("status")
             },
             "source": {
                 "type": request.source.type,
                 "id": request.source.id,
                 "provisioned": {
-                    "id": response_data["source"]["id"]
+                    "id": response_data.get("source", {}).get("id")
                 } if response_data.get("source", {}).get("id") else None
             },
             "full_provider_response": response_data,
@@ -278,5 +278,5 @@ class CheckoutClient:
             return self._transform_error_response(e.response, error_data)
 
         # Transform response to SDK format
-        return await self._transform_checkout_response(response.json(), request)
+        return self._transform_checkout_response(response.json(), request)
             
