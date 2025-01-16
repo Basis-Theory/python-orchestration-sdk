@@ -25,7 +25,6 @@ When a transaction fails, the SDK returns an error response with the following s
 
 ### ErrorResponse
 
-```python
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | error_codes | list[ErrorCode] | None | List of error codes indicating what went wrong |
