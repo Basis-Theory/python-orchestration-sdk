@@ -4,7 +4,7 @@ This guide explains how to use Checkout.com as a payment provider with the Payme
 
 ## Configuration
 
-Configure Checkout.com in the SDK initialization:
+Configure Checkout.com in the SDK initialization, for additional information on initializing the SDK see the [API Reference](../api-reference.md#sdk-initialization).
 
 ```python
 sdk = PaymentOrchestrationSDK.init({
@@ -28,135 +28,14 @@ You can obtain these credentials from your [Checkout.com Dashboard](https://dash
 
 ## Test Cards
 
-For testing, use these Checkout.com test card numbers:
+For testing, a few test card numbers are provided below, for a full list of test cards see the [Checkout.com documentation](https://www.checkout.com/docs/developer-resources/testing/test-cards).
 
-- **Visa**: 4242424242424242
-- **Mastercard**: 5555555555554444
-- **American Express**: 378282246310005
+| Card Type | Number | Notes |
+|-----------|---------|-------|
+| Visa | 4242424242424242 | Standard test card |
+| Mastercard | 5555555555554444 | Standard test card |
+| American Express | 378282246310005 | Standard test card |
 
-## Processing Payments
+## Transactions
 
-### One-Time Payment
-
-```python
-response = await sdk.checkout.transaction({
-    'reference': str(uuid.uuid4()),
-    'type': RecurringType.ONE_TIME,
-    'amount': {
-        'value': 1000,
-        'currency': 'USD'
-    },
-    'source': {
-        'type': 'basis_theory_token',
-        'id': token_id,
-        'store_with_provider': False
-    }
-})
-```
-
-### Card-on-File Payment
-
-```python
-response = await sdk.checkout.transaction({
-    'reference': str(uuid.uuid4()),
-    'type': RecurringType.UNSCHEDULED,
-    'amount': {
-        'value': 1000,
-        'currency': 'USD'
-    },
-    'source': {
-        'type': 'basis_theory_token',
-        'id': token_id,
-        'store_with_provider': True,
-        'holderName': 'John Doe'
-    },
-    'customer': {
-        'reference': str(uuid.uuid4()),
-        'first_name': 'John',
-        'last_name': 'Doe',
-        'email': 'john.doe@example.com',
-        'address': {
-            'address_line1': '123 Main St',
-            'city': 'New York',
-            'state': 'NY',
-            'zip': '10001',
-            'country': 'US'
-        }
-    }
-})
-
-# Store the processor token for future use
-processor_token = response['source']['provisioned']['id']
-```
-
-### 3DS Payment
-
-```python
-response = await sdk.checkout.transaction({
-    'reference': str(uuid.uuid4()),
-    'type': RecurringType.ONE_TIME,
-    'amount': {
-        'value': 1000,
-        'currency': 'USD'
-    },
-    'source': {
-        'type': 'basis_theory_token',
-        'id': token_id
-    },
-    'three_ds': {
-        'eci': '05',
-        'authentication_value': 'YOUR_3DS_AUTH_VALUE',
-        'xid': 'YOUR_3DS_XID',
-        'version': '2.2.0'
-    }
-})
-```
-
-### Using Stored Cards
-
-```python
-response = await sdk.checkout.transaction({
-    'reference': str(uuid.uuid4()),
-    'type': RecurringType.UNSCHEDULED,
-    'merchant_initiated': True,
-    'amount': {
-        'value': 1000,
-        'currency': 'USD'
-    },
-    'source': {
-        'type': 'processor_token',
-        'id': 'PREVIOUSLY_STORED_PROCESSOR_TOKEN'
-    }
-})
-```
-
-
-## Environment Support
-
-### Test Environment
-
-```python
-sdk = PaymentOrchestrationSDK.init({
-    'isTest': True,
-    'providerConfig': {
-        'checkout': {
-            'private_key': 'YOUR_TEST_CHECKOUT_PRIVATE_KEY',
-            'processing_channel': 'YOUR_TEST_PROCESSING_CHANNEL'
-        }
-    }
-})
-```
-
-### Production Environment
-
-```python
-sdk = PaymentOrchestrationSDK.init({
-    'isTest': False,
-    'providerConfig': {
-        'checkout': {
-            'private_key': 'YOUR_PRODUCTION_CHECKOUT_PRIVATE_KEY',
-            'processing_channel': 'YOUR_PRODUCTION_PROCESSING_CHANNEL'
-        }
-    }
-})
-``` 
+You will use the `sdk.checkout.transaction()` method to process transactions following the [TransactionRequest](../api-reference.md#transactionrequest) model.
