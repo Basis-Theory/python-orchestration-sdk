@@ -48,6 +48,5 @@ sdk = PaymentOrchestrationSDK.init({
 Your Basis Theory API key needs the following permissions:
 
 - `token:use`
-- `token_intent:use`
 
 You can create an API key with these permissions in the [Basis Theory Portal](https://portal.basistheory.com).
