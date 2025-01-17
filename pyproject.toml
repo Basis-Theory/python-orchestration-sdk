@@ -10,7 +10,7 @@ authors = [
 ]
 description = "A Python SDK for payment processing"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 dependencies = [
     "requests>=2.25.0",
     "basistheory @ git+https://github.com/Basis-Theory/basistheory-python.git",
