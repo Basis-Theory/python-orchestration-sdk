@@ -1,5 +1,5 @@
-from typing import Dict, Any, Tuple, Optional
-from datetime import datetime
+from typing import Dict, Any, Tuple, Optional, Union, cast
+from datetime import datetime, timezone
 import requests
 
 from ..models import (
@@ -97,13 +97,15 @@ class AdyenClient:
         self.base_url = "https://checkout-test.adyen.com/v71" if is_test else f"https://{production_prefix}-checkout-live.adyenpayments.com/checkout/v71"
         self.request_client = RequestClient(bt_api_key)
 
-    def _get_status_code(self, adyen_result_code: str) -> TransactionStatusCode:
+    def _get_status_code(self, adyen_result_code: Optional[str]) -> TransactionStatusCode:
         """Map Adyen result code to our status code."""
+        if not adyen_result_code:
+            return TransactionStatusCode.DECLINED
         return STATUS_CODE_MAPPING.get(adyen_result_code, TransactionStatusCode.DECLINED)
 
     def _transform_to_adyen_payload(self, request: TransactionRequest) -> Dict[str, Any]:
         """Transform SDK request to Adyen payload format."""
-        payload = {
+        payload: Dict[str, Any] = {
             "amount": {
                 "value": request.amount.value,
                 "currency": request.amount.currency
@@ -119,28 +121,30 @@ class AdyenClient:
 
         # Add recurring type if provided
         if request.type:
-            payload["recurringProcessingModel"] = RECURRING_TYPE_MAPPING[request.type]
+            recurring_type = RECURRING_TYPE_MAPPING.get(request.type)
+            if recurring_type:
+                payload["recurringProcessingModel"] = recurring_type
 
         # Process source based on type
+        payment_method: Dict[str, Any] = {"type": "scheme"}
+        
         if request.source.type == SourceType.PROCESSOR_TOKEN:
-            payload["paymentMethod"] = {
-                "type": "scheme",
-                "storedPaymentMethodId": request.source.id
-            }
+            payment_method["storedPaymentMethodId"] = request.source.id
             if request.source.holderName:
-                payload["paymentMethod"]["holderName"] = request.source.holderName
+                payment_method["holderName"] = request.source.holderName
         elif request.source.type in [SourceType.BASIS_THEORY_TOKEN, SourceType.BASIS_THEORY_TOKEN_INTENT]:
             # Add card data with Basis Theory expressions
             token_prefix = "token_intent" if request.source.type == SourceType.BASIS_THEORY_TOKEN_INTENT else "token"
-            payload["paymentMethod"] = {
-                "type": "scheme",
+            payment_method.update({
                 "number": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.number'}}}}",
                 "expiryMonth": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.expiration_month'}}}}",
                 "expiryYear": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.expiration_year'}}}}",
                 "cvc": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.cvc'}}}}"
-            }
+            })
             if request.source.holderName:
-                payload["paymentMethod"]["holderName"] = request.source.holderName
+                payment_method["holderName"] = request.source.holderName
+
+        payload["paymentMethod"] = payment_method
 
         # Add customer information
         if request.customer:
@@ -149,11 +153,12 @@ class AdyenClient:
 
             # Map name fields
             if request.customer.first_name or request.customer.last_name:
-                payload["shopperName"] = {}
+                shopper_name: Dict[str, str] = {}
                 if request.customer.first_name:
-                    payload["shopperName"]["firstName"] = request.customer.first_name
+                    shopper_name["firstName"] = request.customer.first_name
                 if request.customer.last_name:
-                    payload["shopperName"]["lastName"] = request.customer.last_name
+                    shopper_name["lastName"] = request.customer.last_name
+                payload["shopperName"] = shopper_name
 
             # Map email directly
             if request.customer.email:
@@ -163,24 +168,25 @@ class AdyenClient:
             if request.customer.address:
                 address = request.customer.address
                 if any([address.address_line1, address.city, address.state, address.zip, address.country]):
-                    payload["billingAddress"] = {}
+                    billing_address: Dict[str, str] = {}
 
                     # Map address_line1 to street
                     if address.address_line1:
-                        payload["billingAddress"]["street"] = address.address_line1
-
-                    # address_line2 is not mapped as per CSV
+                        billing_address["street"] = address.address_line1
 
                     if address.city:
-                        payload["billingAddress"]["city"] = address.city
+                        billing_address["city"] = address.city
 
                     if address.state:
-                        payload["billingAddress"]["stateOrProvince"] = address.state
+                        billing_address["stateOrProvince"] = address.state
 
                     if address.zip:
-                        payload["billingAddress"]["postalCode"] = address.zip
+                        billing_address["postalCode"] = address.zip
 
-                    payload["billingAddress"]["country"] = address.country
+                    if address.country:
+                        billing_address["country"] = address.country
+
+                    payload["billingAddress"] = billing_address
 
         # Map statement description (only name, city is not mapped as per CSV)
         if request.statement_description and request.statement_description.name:
@@ -188,19 +194,22 @@ class AdyenClient:
 
         # Map 3DS information
         if request.three_ds:
-            payload["additionalData"] = {"threeDSecure": {}}
+            three_ds_data: Dict[str, str] = {}
 
             if request.three_ds.eci:
-                payload["additionalData"]["threeDSecure"]["eci"] = request.three_ds.eci
+                three_ds_data["eci"] = request.three_ds.eci
 
             if request.three_ds.authentication_value:
-                payload["additionalData"]["threeDSecure"]["authenticationValue"] = request.three_ds.authentication_value
+                three_ds_data["authenticationValue"] = request.three_ds.authentication_value
 
             if request.three_ds.xid:
-                payload["additionalData"]["threeDSecure"]["xid"] = request.three_ds.xid
+                three_ds_data["xid"] = request.three_ds.xid
 
             if request.three_ds.version:
-                payload["additionalData"]["threeDSecure"]["threeDSVersion"] = request.three_ds.version
+                three_ds_data["threeDSVersion"] = request.three_ds.version
+
+            if three_ds_data:
+                payload["additionalData"] = {"threeDSecure": three_ds_data}
 
         return payload
 
@@ -229,7 +238,7 @@ class AdyenClient:
             },
             "networkTransactionId": response_data.get("additionalData", {}).get("networkTxReference"),
             "full_provider_response": response_data,
-            "created_at": datetime.utcnow().isoformat() + "Z"
+            "created_at": datetime.now(timezone.utc).isoformat()
         }
 
     def _transform_error_response(self, response: requests.Response, response_data: Dict[str, Any]) -> Dict[str, Any]:

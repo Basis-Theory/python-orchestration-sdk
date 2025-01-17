@@ -9,12 +9,12 @@ Configure Adyen in the SDK initialization, for additional information on initial
 ```python
 sdk = PaymentOrchestrationSDK.init({
     'isTest': True,  # Set to False for production
-    'btApiKey': os.environ['BASISTHEORY_API_KEY'],
+    'btApiKey': os.getenv('BASISTHEORY_API_KEY'),
     'providerConfig': {
         'adyen': {
-            'apiKey': os.environ['ADYEN_API_KEY'],
-            'merchantAccount': os.environ['ADYEN_MERCHANT_ACCOUNT'],
-            'productionPrefix': os.environ['ADYEN_PRODUCTION_PREFIX']
+            'apiKey': os.getenv('ADYEN_API_KEY'),
+            'merchantAccount': os.getenv('ADYEN_MERCHANT_ACCOUNT'),
+            'productionPrefix': os.getenv('ADYEN_PRODUCTION_PREFIX')
         }
     }
 })

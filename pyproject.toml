@@ -1,25 +1,23 @@
 [build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
-[project]
+[tool.poetry]
 name = "orchestration_sdk"
 version = "0.1.0"
-authors = [
-  { name = "Your Name", email = "your.email@example.com" },
-]
 description = "A Python SDK for payment processing"
+authors = ["Your Name <your.email@example.com>"]
 readme = "README.md"
-requires-python = ">=3.7"
-dependencies = [
-    "requests>=2.25.0",
-    "basistheory @ git+https://github.com/Basis-Theory/basistheory-python.git",
-]
 
-[project.optional-dependencies]
-test = [
-    "pytest>=6.0",
-    "pytest-cov>=2.0",
-    "pytest-asyncio>=0.25.0",
-    "python-dotenv>=1.0.0",
-]
+[tool.poetry.dependencies]
+python = ">=3.9"
+requests = ">=2.25.0"
+
+[tool.poetry.group.test.dependencies]
+pytest = ">=6.0"
+pytest-cov = ">=2.0"
+pytest-asyncio = ">=0.25.0"
+python-dotenv = ">=1.0.0"
+mypy = ">=1.0.0"
+types-requests = ">=2.25.0"
+basistheory = { git = "https://github.com/Basis-Theory/basistheory-python.git" }

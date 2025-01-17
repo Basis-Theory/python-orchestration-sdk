@@ -9,11 +9,11 @@ Configure Checkout.com in the SDK initialization, for additional information on 
 ```python
 sdk = PaymentOrchestrationSDK.init({
     'isTest': True,  # Set to False for production
-    'btApiKey': os.environ['BASISTHEORY_API_KEY'],
+    'btApiKey': os.getenv('BASISTHEORY_API_KEY'),
     'providerConfig': {
         'checkout': {
-            'private_key': os.environ['CHECKOUT_PRIVATE_KEY'],
-            'processing_channel': os.environ['CHECKOUT_PROCESSING_CHANNEL']  # Optional
+            'private_key': os.getenv('CHECKOUT_PRIVATE_KEY'),
+            'processing_channel': os.getenv('CHECKOUT_PROCESSING_CHANNEL')  # Optional
         }
     }
 })

@@ -1,18 +1,19 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Union, List, cast
 import requests
+from requests.models import Response
 from ..models import ErrorType
 
 
 class RequestClient:
-    def __init__(self, bt_api_key: str):
+    def __init__(self, bt_api_key: str) -> None:
         self.bt_api_key = bt_api_key
 
-    def _is_bt_error(self, response: requests.Response) -> bool:
+    def _is_bt_error(self, response: Response) -> bool:
         """Check if the error is from BasisTheory by comparing status codes."""
         bt_status = response.headers.get('BT-PROXY-DESTINATION-STATUS')
         return bt_status is None or str(response.status_code) != bt_status
 
-    def _transform_bt_error(self, response: requests.Response) -> Dict[str, Any]:
+    def _transform_bt_error(self, response: Response) -> Dict[str, Any]:
         """Transform BasisTheory error response to standardized format."""
         error_type = ErrorType.BT_UNEXPECTED  # Default error type
         
@@ -28,6 +29,17 @@ class RequestClient:
         except:
             response_data = {"message": response.text or "Unknown error"}
 
+        provider_errors: List[Dict[str, str]] = []
+        proxy_error = response_data.get("proxy_error", {})
+        errors = proxy_error.get("errors", {}) if isinstance(proxy_error, dict) else {}
+        
+        for key, value in errors.items():
+            if isinstance(key, str):
+                provider_errors.append({
+                    "error": key,
+                    "details": str(value)
+                })
+
         return {
             "error_codes": [
                 {
@@ -35,10 +47,7 @@ class RequestClient:
                     "code": error_type.code
                 }
             ],
-            "provider_errors": [
-                {"error": key, "details": value} 
-                for key, value in response_data.get("proxy_error", {}).get("errors", {}).items()
-            ],
+            "provider_errors": provider_errors,
             "full_provider_response": response_data
         }
 
@@ -49,46 +58,36 @@ class RequestClient:
         headers: Optional[Dict[str, str]] = None,
         data: Optional[Dict[str, Any]] = None,
         use_bt_proxy: bool = False
-    ) -> requests.Response:
+    ) -> Response:
         """Make an HTTP request, optionally through the BasisTheory proxy."""
-        if headers is None:
-            headers = {}
+        request_headers = headers.copy() if headers else {}
 
         if use_bt_proxy:
             # Add BT API key and proxy headers
-            headers["BT-API-KEY"] = self.bt_api_key
+            request_headers["BT-API-KEY"] = self.bt_api_key
             # Add proxy header only if not already present
-            if "BT-PROXY-URL" not in headers:
-                headers["BT-PROXY-URL"] = url
+            if "BT-PROXY-URL" not in request_headers:
+                request_headers["BT-PROXY-URL"] = url
             # Use the BT proxy endpoint
             request_url = "https://api.basistheory.com/proxy"
-
-
-            response = requests.request(
-                method=method,
-                url=request_url,
-                headers=headers,
-                json=data
-            )
-
-            # Check for BT errors first
-            if not response.ok and self._is_bt_error(response):
-                error_response = self._transform_bt_error(response)
-                # Raise an HTTPError with the transformed error response
-                error = requests.exceptions.HTTPError(response=response)
-                error.bt_error_response = error_response
-                raise error
-
         else:
             request_url = url
 
-            # Make the request
-            response = requests.request(
-                method=method,
-                url=request_url,
-                headers=headers,
-                json=data
-            )
+        # Make the request
+        response = requests.request(
+            method=method,
+            url=request_url,
+            headers=request_headers,
+            json=data
+        )
+
+        # Check for BT errors first
+        if use_bt_proxy and not response.ok and self._is_bt_error(response):
+            error_response = self._transform_bt_error(response)
+            # Raise an HTTPError with the transformed error response
+            error = requests.exceptions.HTTPError(response=response)
+            setattr(error, 'bt_error_response', error_response)
+            raise error
 
         # Raise for other HTTP errors
         response.raise_for_status()

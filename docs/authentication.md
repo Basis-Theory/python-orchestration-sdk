@@ -33,11 +33,11 @@ load_dotenv()
 # Initialize the SDK
 sdk = PaymentOrchestrationSDK.init({
     'isTest': True,  # Set to False for production
-    'btApiKey': os.environ['BASISTHEORY_API_KEY'],
+    'btApiKey': os.getenv('BASISTHEORY_API_KEY'),
     'providerConfig': {
         'adyen': {
-            'apiKey': os.environ['ADYEN_API_KEY'],
-            'merchantAccount': os.environ['ADYEN_MERCHANT_ACCOUNT'],
+            'apiKey': os.getenv('ADYEN_API_KEY'),
+            'merchantAccount': os.getenv('ADYEN_MERCHANT_ACCOUNT'),
         }
     }
 })

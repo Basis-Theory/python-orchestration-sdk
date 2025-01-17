@@ -1,4 +1,4 @@
-from typing import Dict, Any, Tuple, Optional
+from typing import Dict, Any, Tuple, Optional, Union, cast
 from datetime import datetime
 import requests
 import os
@@ -166,21 +166,25 @@ class CheckoutClient:
         self.base_url = "https://api.sandbox.checkout.com" if is_test else "https://api.checkout.com"
         self.request_client = RequestClient(bt_api_key)
 
-    def _get_status_code(self, checkout_status: str) -> TransactionStatusCode:
+    def _get_status_code(self, checkout_status: Optional[str]) -> TransactionStatusCode:
         """Map Checkout.com status to our status code."""
+        if not checkout_status:
+            return TransactionStatusCode.DECLINED
         return STATUS_CODE_MAPPING.get(checkout_status, TransactionStatusCode.DECLINED)
 
     def _transform_to_checkout_payload(self, request: TransactionRequest) -> Dict[str, Any]:
         """Transform SDK request to Checkout.com payload format."""
         
-        payload = { 
+        payload: Dict[str, Any] = { 
             "amount": request.amount.value,
             "currency": request.amount.currency,
             "merchant_initiated": request.merchant_initiated,
-            "payment_type": RECURRING_TYPE_MAPPING.get(request.type),
             "processing_channel_id": self.processing_channel,
             "reference": request.reference
         }
+
+        if request.type:
+            payload["payment_type"] = RECURRING_TYPE_MAPPING.get(request.type)
 
         # Process source based on type
         if request.source.type == SourceType.PROCESSOR_TOKEN:
@@ -191,7 +195,7 @@ class CheckoutClient:
         elif request.source.type in [SourceType.BASIS_THEORY_TOKEN, SourceType.BASIS_THEORY_TOKEN_INTENT]:
             # Add card data with Basis Theory expressions
             token_prefix = "token_intent" if request.source.type == SourceType.BASIS_THEORY_TOKEN_INTENT else "token"
-            payload["source"] = {
+            source_data: Dict[str, Any] = {
                 "type": "card",
                 "number": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.number'}}}}",
                 "expiry_month": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.expiration_month'}}}}",
@@ -199,56 +203,65 @@ class CheckoutClient:
                 "cvv": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.cvc'}}}}",
                 "store_for_future_use": request.source.store_with_provider
             }
+            payload["source"] = source_data
 
         # Add customer information if provided
         if request.customer:
-            payload["customer"] = {}
+            customer_data: Dict[str, Any] = {}
             if request.customer.first_name or request.customer.last_name:
                 name_parts = []
                 if request.customer.first_name:
                     name_parts.append(request.customer.first_name)
                 if request.customer.last_name:
                     name_parts.append(request.customer.last_name)
-                payload["customer"]["name"] = " ".join(name_parts)
+                customer_data["name"] = " ".join(name_parts)
 
             if request.customer.email:
-                payload["customer"]["email"] = request.customer.email
+                customer_data["email"] = request.customer.email
+            
+            payload["customer"] = customer_data
 
             # Add billing address if provided
-            if request.customer.address:
-                payload["source"]["billing_address"] = {}
+            if request.customer.address and "source" in payload:
+                billing_address: Dict[str, str] = {}
                 if request.customer.address.address_line1:
-                    payload["source"]["billing_address"]["address_line1"] = request.customer.address.address_line1
+                    billing_address["address_line1"] = request.customer.address.address_line1
                 if request.customer.address.address_line2:
-                    payload["source"]["billing_address"]["address_line2"] = request.customer.address.address_line2
+                    billing_address["address_line2"] = request.customer.address.address_line2
                 if request.customer.address.city:
-                    payload["source"]["billing_address"]["city"] = request.customer.address.city
+                    billing_address["city"] = request.customer.address.city
                 if request.customer.address.state:
-                    payload["source"]["billing_address"]["state"] = request.customer.address.state
+                    billing_address["state"] = request.customer.address.state
                 if request.customer.address.zip:
-                    payload["source"]["billing_address"]["zip"] = request.customer.address.zip
+                    billing_address["zip"] = request.customer.address.zip
                 if request.customer.address.country:
-                    payload["source"]["billing_address"]["country"] = request.customer.address.country
+                    billing_address["country"] = request.customer.address.country
+                
+                source = cast(Dict[str, Any], payload["source"])
+                source["billing_address"] = billing_address
 
         # Add statement descriptor if provided
-        if request.statement_description:
-            payload["source"]["billing_descriptor"] = {}
+        if request.statement_description and "source" in payload:
+            source = cast(Dict[str, Any], payload["source"])
+            billing_descriptor: Dict[str, str] = {}
             if request.statement_description.name:
-                payload["source"]["billing_descriptor"]["name"] = request.statement_description.name
+                billing_descriptor["name"] = request.statement_description.name
             if request.statement_description.city:
-                payload["source"]["billing_descriptor"]["city"] = request.statement_description.city
+                billing_descriptor["city"] = request.statement_description.city
+            source["billing_descriptor"] = billing_descriptor
 
         # Add 3DS information if provided
         if request.three_ds:
-            payload["3ds"] = {}
+            three_ds_data: Dict[str, str] = {}
             if request.three_ds.eci:
-                payload["3ds"]["eci"] = request.three_ds.eci
+                three_ds_data["eci"] = request.three_ds.eci
             if request.three_ds.authentication_value:
-                payload["3ds"]["cryptogram"] = request.three_ds.authentication_value
+                three_ds_data["cryptogram"] = request.three_ds.authentication_value
             if request.three_ds.xid:
-                payload["3ds"]["xid"] = request.three_ds.xid
+                three_ds_data["xid"] = request.three_ds.xid
             if request.three_ds.version:
-                payload["3ds"]["version"] = request.three_ds.version
+                three_ds_data["version"] = request.three_ds.version
+            payload["3ds"] = three_ds_data
 
         return payload
 

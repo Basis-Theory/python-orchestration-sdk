@@ -3,11 +3,11 @@ import os
 import json
 import uuid
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
-from basistheory.api_client import ApiClient
-from basistheory.configuration import Configuration
-from basistheory.api.tokens_api import TokensApi
+from basistheory.api_client import ApiClient # type: ignore
+from basistheory.configuration import Configuration # type: ignore
+from basistheory.api.tokens_api import TokensApi # type: ignore
 from orchestration_sdk import PaymentOrchestrationSDK
 from orchestration_sdk.models import (
     TransactionResponse,
@@ -26,10 +26,10 @@ load_dotenv()
 async def create_bt_token(card_number: str = "4242424242424242", expiration_year: str = "2030", expiration_month: str = "03", cvc: str = "100"):
     """Create a Basis Theory token for testing."""
     configuration = Configuration(
-        api_key=os.environ['BASISTHEORY_API_KEY']
+        api_key=os.getenv('BASISTHEORY_API_KEY')
     )
     # Calculate expiry time (10 minutes from now)
-    expires_at = (datetime.utcnow() + timedelta(minutes=10)).isoformat() + "Z"
+    expires_at = (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat()
     
     with ApiClient(configuration) as api_client:
         tokens_api = TokensApi(api_client)
@@ -51,7 +51,7 @@ async def create_bt_token_intent(card_number: str = "4242424242424242"):
 
     url = "https://api.basistheory.com/token-intents"
     headers = {
-        "BT-API-KEY": os.environ['BASISTHEORY_API_KEY'],
+        "BT-API-KEY": os.getenv('BASISTHEORY_API_KEY'),
         "Content-Type": "application/json"
     }
     payload = {
@@ -69,10 +69,10 @@ async def create_bt_token_intent(card_number: str = "4242424242424242"):
     print(f"Response: {response_data}")
     return response_data['id']
 
-def get_sdk(private_key = os.environ['CHECKOUT_PRIVATE_KEY'], processing_channel = os.environ['CHECKOUT_PROCESSING_CHANNEL']):
+def get_sdk(private_key = os.getenv('CHECKOUT_PRIVATE_KEY'), processing_channel = os.getenv('CHECKOUT_PROCESSING_CHANNEL')):
     return PaymentOrchestrationSDK.init({
         'isTest': True,
-        'btApiKey': os.environ['BASISTHEORY_API_KEY'],
+        'btApiKey': os.getenv('BASISTHEORY_API_KEY'),
         'providerConfig': {
             'checkout': {
                 'private_key': private_key,
