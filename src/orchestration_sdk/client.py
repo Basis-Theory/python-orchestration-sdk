@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, cast
 from dataclasses import dataclass
 from .providers.adyen import AdyenClient
 from .providers.checkout import CheckoutClient
@@ -9,7 +9,7 @@ from .exceptions import ConfigurationError
 class AdyenConfig:
     api_key: str
     merchant_account: str
-    production_prefix: Optional[str] = ""
+    production_prefix: str = ""
 
 
 @dataclass
@@ -25,11 +25,11 @@ class ProviderConfig:
 
 
 class PaymentOrchestrationSDK:
-    _instance = None
+    _instance: Optional['PaymentOrchestrationSDK'] = None
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.is_test: bool = False
-        self.bt_api_key: Optional[str] = None
+        self.bt_api_key: str = ""
         self.provider_config: Optional[ProviderConfig] = None
 
     @classmethod
@@ -45,28 +45,31 @@ class PaymentOrchestrationSDK:
         if 'providerConfig' not in config:
             raise ConfigurationError("'providerConfig' parameter is required")
 
-        cls._instance.is_test = config['isTest']
-        cls._instance.bt_api_key = config['btApiKey']
+        instance = cast(PaymentOrchestrationSDK, cls._instance)
+        instance.is_test = config['isTest']
+        instance.bt_api_key = config['btApiKey']
 
         provider_config = config['providerConfig']
-        cls._instance.provider_config = ProviderConfig()
+        instance.provider_config = ProviderConfig()
 
         # Initialize Adyen configuration if provided
         if 'adyen' in provider_config:
-            cls._instance.provider_config.adyen = AdyenConfig(
-                api_key=provider_config['adyen']['apiKey'],
-                merchant_account=provider_config['adyen']['merchantAccount'],
-                production_prefix=provider_config['adyen'].get('productionPrefix')
+            adyen_config = provider_config['adyen']
+            instance.provider_config.adyen = AdyenConfig(
+                api_key=adyen_config['apiKey'],
+                merchant_account=adyen_config['merchantAccount'],
+                production_prefix=adyen_config.get('productionPrefix', "")
             )
 
         # Initialize Checkout.com configuration if provided
         if 'checkout' in provider_config:
-            cls._instance.provider_config.checkout = CheckoutConfig(
-                private_key=provider_config['checkout']['private_key'],
-                processing_channel=provider_config['checkout'].get('processing_channel')
+            checkout_config = provider_config['checkout']
+            instance.provider_config.checkout = CheckoutConfig(
+                private_key=checkout_config['private_key'],
+                processing_channel=checkout_config['processing_channel']
             )
 
-        return cls._instance
+        return instance
 
     @classmethod
     def get_instance(cls) -> 'PaymentOrchestrationSDK':
