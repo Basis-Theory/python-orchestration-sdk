@@ -11,7 +11,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.9"
-requests = ">=2.25.0"
+requests = ">=2.32.2"
 
 [tool.poetry.group.test.dependencies]
 pytest = ">=6.0"
@@ -19,5 +19,5 @@ pytest-cov = ">=2.0"
 pytest-asyncio = ">=0.25.0"
 python-dotenv = ">=1.0.0"
 mypy = ">=1.0.0"
-types-requests = ">=2.25.0"
+types-requests = ">=2.31.0"
 basistheory = { git = "https://github.com/Basis-Theory/basistheory-python.git" }
