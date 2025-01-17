@@ -2,7 +2,7 @@
 import os
 import uuid
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from dotenv import load_dotenv
 from basistheory.api_client import ApiClient # type: ignore
 from basistheory.configuration import Configuration # type: ignore
@@ -24,10 +24,10 @@ load_dotenv()
 async def create_bt_token(card_number: str = "4111111145551142"):
     """Create a Basis Theory token for testing."""
     configuration = Configuration(
-        api_key=os.environ['BASISTHEORY_API_KEY']
+        api_key=os.getenv('BASISTHEORY_API_KEY')
     )
     # Calculate expiry time (10 minutes from now)
-    expires_at = (datetime.utcnow() + timedelta(minutes=10)).isoformat() + "Z"
+    expires_at = (datetime.now(UTC) + timedelta(minutes=10)).isoformat()
     
     with ApiClient(configuration) as api_client:
         tokens_api = TokensApi(api_client)
@@ -49,7 +49,7 @@ async def create_bt_token_intent(card_number: str = "4111111145551142"):
 
     url = "https://api.basistheory.com/token-intents"
     headers = {
-        "BT-API-KEY": os.environ['BASISTHEORY_API_KEY'],
+        "BT-API-KEY": os.getenv('BASISTHEORY_API_KEY'),
         "Content-Type": "application/json"
     }
     payload = {
@@ -67,10 +67,10 @@ async def create_bt_token_intent(card_number: str = "4111111145551142"):
     print(f"Response: {response_data}")
     return response_data['id']
 
-def get_sdk(api_key = os.environ['ADYEN_API_KEY'], merchant_account = os.environ['ADYEN_MERCHANT_ACCOUNT']):
+def get_sdk(api_key = os.getenv('ADYEN_API_KEY'), merchant_account = os.getenv('ADYEN_MERCHANT_ACCOUNT')):
     return PaymentOrchestrationSDK.init({
         'isTest': True,
-        'btApiKey': os.environ['BASISTHEORY_API_KEY'],
+        'btApiKey': os.getenv('BASISTHEORY_API_KEY'),
         'providerConfig': {
             'adyen': {
                 'apiKey': api_key,
@@ -155,9 +155,14 @@ async def test_storing_card_on_file():
     assert isinstance(response['full_provider_response'], dict)
     
     assert 'created_at' in response
-    # Optionally validate created_at is a valid datetime string
+    # Validate created_at is a valid datetime string
     try:
-        datetime.fromisoformat(response['created_at'].replace('Z', '+00:00'))
+        # Remove any duplicate timezone offset
+        created_at = response['created_at']
+        if '+00:00+00:00' in created_at:
+            created_at = created_at.replace('+00:00+00:00', '+00:00')
+        print(f"Created at: {created_at}")
+        datetime.fromisoformat(created_at)
     except ValueError:
         pytest.fail("created_at is not a valid ISO datetime string")
 

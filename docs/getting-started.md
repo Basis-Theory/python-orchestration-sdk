@@ -40,12 +40,12 @@ load_dotenv()
 # Initialize the SDK with your chosen provider
 sdk = PaymentOrchestrationSDK.init({
     'isTest': True,
-    'btApiKey': os.environ['BASISTHEORY_API_KEY'],
+    'btApiKey': os.getenv('BASISTHEORY_API_KEY'),
     'providerConfig': {
         # Configure your chosen provider with their specific configuration
         'adyen': { 
-            'apiKey': os.environ['ADYEN_API_KEY'],
-            'merchantAccount': os.environ['ADYEN_MERCHANT_ACCOUNT'],
+            'apiKey': os.getenv('ADYEN_API_KEY'),
+            'merchantAccount': os.getenv('ADYEN_MERCHANT_ACCOUNT'),
         }
     }
 })
@@ -69,12 +69,12 @@ async def process_payment():
     # Initialize the SDK with your chosen provider
     sdk = PaymentOrchestrationSDK.init({
         'isTest': True,
-        'btApiKey': os.environ['BASISTHEORY_API_KEY'],
+        'btApiKey': os.getenv('BASISTHEORY_API_KEY'),
         'providerConfig': {
             # Configure your chosen provider
             'adyen': {  # Replace with your chosen provider
-                'apiKey': os.environ['ADYEN_API_KEY'],
-                'merchantAccount': os.environ['ADYEN_MERCHANT_ACCOUNT'],
+                'apiKey': os.getenv('ADYEN_API_KEY'),
+                'merchantAccount': os.getenv('ADYEN_MERCHANT_ACCOUNT'),
             }
         }
     })
@@ -84,7 +84,7 @@ async def process_payment():
     
     url = "https://api.basistheory.com/token-intents"
     headers = {
-        "BT-API-KEY": os.environ['BASISTHEORY_API_KEY'],
+        "BT-API-KEY": os.getenv('BASISTHEORY_API_KEY'),
         "Content-Type": "application/json"
     }
     payload = {
