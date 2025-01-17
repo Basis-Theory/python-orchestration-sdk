@@ -1,0 +1,21 @@
+name: Semgrep PR Check
+
+on:
+
+_# Scan changed files in PRs (diff-aware scanning):_
+
+pull\_request: {}
+
+_# Scan on-demand through GitHub Actions interface:_
+
+workflow\_dispatch: {}
+
+jobs:
+
+pr-security-check:
+
+name: PR Security Check
+
+uses: Basis-Theory/public-security-workflows/.github/workflows/pr-check.yml\@master
+
+secrets: inherit
