@@ -1,5 +1,5 @@
 from typing import Dict, Any, Tuple, Optional, Union, cast
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 import requests
 
 from ..models import (
@@ -238,7 +238,7 @@ class AdyenClient:
             },
             "networkTransactionId": response_data.get("additionalData", {}).get("networkTxReference"),
             "full_provider_response": response_data,
-            "created_at": datetime.now(UTC).isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat()
         }
 
     def _transform_error_response(self, response: requests.Response, response_data: Dict[str, Any]) -> Dict[str, Any]:

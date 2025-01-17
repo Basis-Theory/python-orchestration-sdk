@@ -3,7 +3,7 @@ import os
 import json
 import uuid
 import pytest
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from basistheory.api_client import ApiClient # type: ignore
 from basistheory.configuration import Configuration # type: ignore
@@ -29,7 +29,7 @@ async def create_bt_token(card_number: str = "4242424242424242", expiration_year
         api_key=os.getenv('BASISTHEORY_API_KEY')
     )
     # Calculate expiry time (10 minutes from now)
-    expires_at = (datetime.now(UTC) + timedelta(minutes=10)).isoformat()
+    expires_at = (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat()
     
     with ApiClient(configuration) as api_client:
         tokens_api = TokensApi(api_client)
