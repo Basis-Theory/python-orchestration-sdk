@@ -47,7 +47,7 @@ jobs:
       - name: Test
         run: poetry run pytest -rP .
         env:
-          BASISTHEORY_API_KEY: ${{ secrets.BT_SDK_INT_TEST_PVT_API_KEY }}
+          BASISTHEORY_API_KEY: ${{ secrets.BASISTHEORY_API_KEY }}
           ADYEN_API_KEY: ${{ secrets.ADYEN_API_KEY }}
           ADYEN_MERCHANT_ACCOUNT: BasisTheoryECOM
           CHECKOUT_PRIVATE_KEY: ${{ secrets.CHECKOUT_PRIVATE_KEY }}
