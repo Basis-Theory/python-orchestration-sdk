@@ -155,7 +155,9 @@ ERROR_CODE_MAPPING = {
     "success_url_invalid": ErrorType.OTHER,
     "token_required": ErrorType.OTHER,
     "token_type_required": ErrorType.OTHER,
-    "void_amount_invalid": ErrorType.OTHER
+    "void_amount_invalid": ErrorType.OTHER,
+    "refund_amount_exceeds_balance": ErrorType.REFUND_REFUND_AMOUNT_EXCEEDS_BALANCE,
+    "refund_authorization_declined": ErrorType.REFUND_DECLINED
 }
 
 
@@ -358,4 +360,66 @@ class CheckoutClient:
 
         # Transform response to SDK format
         return self._transform_checkout_response(response.json(), request)
+
+    async def refund_transaction(self, transaction_id: str, refund_request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Refund a payment transaction through Checkout.com's API.
+        
+        Args:
+            transaction_id (str): The ID of the transaction to refund
+            refund_request (Dict[str, Any]): The refund request data containing:
+                - reference (str): Your reference for the refund
+                - amount (Dict[str, Any]): Optional amount to refund
+                    - value (int): The amount to refund in minor currency units
+                    - currency (str): The currency of the refund
+                - metadata (Dict[str, Any]): Optional metadata for the refund
+        
+        Returns:
+            Dict[str, Any]: The refund response
+        """
+        # Set up headers
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+
+        # Prepare the refund payload
+        payload = {
+            "reference": refund_request.get('reference'),
+            "amount": refund_request.get('amount')
+        }
+
+        # Add metadata if provided
+        if 'metadata' in refund_request:
+            payload['metadata'] = refund_request['metadata']
+
+        try:
+            # Make request to Checkout.com
+            response = self.request_client.request(
+                url=f"{self.base_url}/payments/{transaction_id}/refunds",
+                method="POST",
+                headers=headers,
+                data=payload,
+                use_bt_proxy=False  # Refunds don't need BT proxy
+            )
+
+            response_data = response.json()
+            
+            # Transform the response to a standardized format
+            return {
+                "id": response_data.get('action_id'),
+                "reference": response_data.get('reference'),
+                "status": {
+                    "code": TransactionStatusCode.REFUNDED,
+                },
+                "full_provider_response": response_data
+            }
+
+        except requests.exceptions.HTTPError as e:
+            try:
+                error_data = e.response.json()
+            except:
+                error_data = None
+
+            return self._transform_error_response(e.response, error_data)
             

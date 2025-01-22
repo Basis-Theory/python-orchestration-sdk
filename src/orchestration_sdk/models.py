@@ -14,7 +14,7 @@ class TransactionStatusCode(str, Enum):
     CHALLENGE_SHOPPER = "ChallengeShopper"
     RECEIVED = "Received"
     PARTIALLY_AUTHORIZED = "PartiallyAuthorised"
-
+    REFUNDED = "Refunded"
 
 class RecurringType(str, Enum):
     ONE_TIME     = "ONE_TIME"
@@ -70,6 +70,9 @@ class ErrorType(Enum):
     INVALID_API_KEY = ("invalid_api_key", ErrorCategory.OTHER)
     UNAUTHORIZED = ("unauthorized", ErrorCategory.OTHER)
     CONFIGURATION_ERROR = ("configuration_error", ErrorCategory.OTHER)
+    REFUND_FAILED = ("refund_failed", ErrorCategory.PROCESSING_ERROR)
+    REFUND_REFUND_AMOUNT_EXCEEDS_BALANCE = ("refund_amount_exceeds_balance", ErrorCategory.PROCESSING_ERROR)
+    REFUND_DECLINED = ("refund_declined", ErrorCategory.PROCESSING_ERROR)
     BT_UNAUTHENTICATED = ("unauthenticated", ErrorCategory.BASIS_THEORY_ERROR)
     BT_UNAUTHORIZED = ("unauthorized", ErrorCategory.BASIS_THEORY_ERROR)
     BT_REQUEST_ERROR = ("request_error", ErrorCategory.BASIS_THEORY_ERROR)

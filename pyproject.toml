@@ -12,6 +12,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = ">=3.9"
 requests = ">=2.32.2"
+faker = "^34.0.0"
 
 [tool.poetry.group.test.dependencies]
 pytest = ">=6.0"
