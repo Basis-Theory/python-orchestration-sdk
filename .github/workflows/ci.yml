@@ -51,4 +51,4 @@ jobs:
           ADYEN_API_KEY: ${{ secrets.ADYEN_API_KEY }}
           ADYEN_MERCHANT_ACCOUNT: BasisTheoryECOM
           CHECKOUT_PRIVATE_KEY: ${{ secrets.CHECKOUT_PRIVATE_KEY }}
-          CHECKOUT_PROCESSING_CHANNEL: pc_icduqczb7aiu7c3m5cpc6tm3aa
+          CHECKOUT_PROCESSING_CHANNEL: pc_svyx45xvauduraq2ckb2gwnvzq
