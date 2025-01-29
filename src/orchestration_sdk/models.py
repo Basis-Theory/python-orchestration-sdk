@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, Any, Dict
+from typing import Optional, Any, Dict, List
 from datetime import datetime
 
 
@@ -177,6 +177,6 @@ class ErrorCode:
 
 @dataclass
 class ErrorResponse:
-    error_codes: list[ErrorCode]
-    provider_errors: list[str]
+    error_codes: List[ErrorCode]
+    provider_errors: List[str]
     full_provider_response: Dict[str, Any] 
