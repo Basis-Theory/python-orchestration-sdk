@@ -14,7 +14,7 @@ jobs:
       - name: Set up python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.9
+          python-version: 3.8
       
       - name: Bootstrap poetry
         run: |
@@ -35,7 +35,7 @@ jobs:
       - name: Set up python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.9
+          python-version: 3.8
       
       - name: Bootstrap poetry
         run: |
@@ -51,4 +51,4 @@ jobs:
           ADYEN_API_KEY: ${{ secrets.ADYEN_API_KEY }}
           ADYEN_MERCHANT_ACCOUNT: BasisTheoryECOM
           CHECKOUT_PRIVATE_KEY: ${{ secrets.CHECKOUT_PRIVATE_KEY }}
-          CHECKOUT_PROCESSING_CHANNEL: pc_icduqczb7aiu7c3m5cpc6tm3aa
+          CHECKOUT_PROCESSING_CHANNEL: pc_svyx45xvauduraq2ckb2gwnvzq
