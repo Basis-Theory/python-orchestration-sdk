@@ -507,7 +507,39 @@ async def test_processor_token_charge_not_storing_card_on_file():
     # Initialize the SDK with environment variables
     sdk = get_sdk();
 
-    token_id = 'src_2oppzuw4phcu7myeecfoqyzwfy'
+    # Create a test transaction with a processor token
+    transaction_request = {
+        'reference': str(uuid.uuid4()),  # Unique reference for the transaction
+        'type': RecurringType.UNSCHEDULED,
+        'amount': {
+            'value': 100,  # Amount in cents
+            'currency': 'USD'
+        },
+        'source': {
+            'type': 'basis_theory_token_intent',
+            'id': token_intent_id,
+            'store_with_provider': True,
+            'holderName': 'John Doe'
+        },
+        'customer': {
+            'reference': str(uuid.uuid4()),
+            'first_name': 'John',
+            'last_name': 'Doe',
+            'email': 'john.doe@example.com',
+            'address': {
+                'address_line1': '123 Main St',
+                'city': 'New York',
+                'state': 'NY',
+                'zip': '10001',
+                'country': 'US'
+            }
+        }
+    }
+
+    # Make the transaction request
+    response = await sdk.checkout.transaction(transaction_request)
+
+    token_id = response['source']['provisioned']['id']
 
     # Create a test transaction with a processor token
     transaction_request = {
