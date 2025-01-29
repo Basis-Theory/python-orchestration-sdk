@@ -87,7 +87,7 @@ async def test_storing_card_on_file():
     # Initialize the SDK with environment variables
     sdk = get_sdk();
 
-    # Create a test transaction with a processor token
+    
     transaction_request = {
         'reference': str(uuid.uuid4()),  # Unique reference for the transaction
         'type': RecurringType.UNSCHEDULED,
@@ -179,7 +179,7 @@ async def test_not_storing_card_on_file():
     # Initialize the SDK with environment variables
     sdk = get_sdk(); 
 
-    # Create a test transaction with a processor token
+    
     transaction_request = {
         'reference': str(uuid.uuid4()),  # Unique reference for the transaction
         'type': RecurringType.ONE_TIME,
@@ -246,7 +246,7 @@ async def test_with_three_ds():
     # Initialize the SDK with environment variables
     sdk = get_sdk();
 
-    # Create a test transaction with a processor token
+    
     transaction_request = {
         'reference': str(uuid.uuid4()),  # Unique reference for the transaction
         'type': RecurringType.ONE_TIME,
@@ -319,7 +319,7 @@ async def test_error_expired_card():
     # Initialize the SDK with environment variables
     sdk = get_sdk();
 
-    # Create a test transaction with a processor token
+    
     transaction_request = {
         'reference': str(uuid.uuid4()),  # Unique reference for the transaction
         'type': RecurringType.ONE_TIME,
@@ -434,7 +434,7 @@ async def test_token_intents_charge_not_storing_card_on_file():
     # Initialize the SDK with environment variables
     sdk = get_sdk();
 
-    # Create a test transaction with a processor token
+    
     transaction_request = {
         'reference': str(uuid.uuid4()),  # Unique reference for the transaction
         'type': RecurringType.ONE_TIME,
@@ -501,7 +501,7 @@ async def test_processor_token_charge_not_storing_card_on_file():
     # Initialize the SDK with environment variables
     sdk = get_sdk();
 
-    # Create a test transaction with a processor token
+    
     transaction_request = {
         'reference': str(uuid.uuid4()),  # Unique reference for the transaction
         'type': RecurringType.UNSCHEDULED,
