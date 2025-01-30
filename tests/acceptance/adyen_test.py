@@ -92,7 +92,7 @@ async def test_storing_card_on_file():
         'reference': str(uuid.uuid4()),  # Unique reference for the transaction
         'type': RecurringType.UNSCHEDULED,
         'amount': {
-            'value': 1,  # Amount in cents (10.00 in this case)
+            'value': 1,  # Amount in cents
             'currency': 'USD'
         },
         'source': {
@@ -113,7 +113,8 @@ async def test_storing_card_on_file():
                 'zip': '10001',
                 'country': 'US'
             }
-        }
+        },
+        'previousNetworkTransactionId': 'PGWC-123-TEST'
     }
 
     # Make the transaction request

@@ -114,7 +114,8 @@ async def test_storing_card_on_file():
                 'zip': '10001',
                 'country': 'US'
             }
-        }
+        },
+        'previousNetworkTransactionId': 'pay_123_test'
     }
 
     # Make the transaction request

@@ -186,6 +186,8 @@ class CheckoutClient:
         if request.type:
             payload["payment_type"] = RECURRING_TYPE_MAPPING.get(request.type)
 
+        if request.previousNetworkTransactionId:
+            payload["previous_payment_id"] = request.previousNetworkTransactionId
         # Process source based on type
         if request.source.type == SourceType.PROCESSOR_TOKEN:
             payload["source"] = {

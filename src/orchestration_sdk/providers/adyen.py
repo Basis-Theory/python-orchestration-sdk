@@ -144,6 +144,9 @@ class AdyenClient:
             if request.source.holderName:
                 payment_method["holderName"] = request.source.holderName
 
+        if request.previousNetworkTransactionId:
+            payment_method["networkPaymentReference"] = request.previousNetworkTransactionId
+
         payload["paymentMethod"] = payment_method
 
         # Add customer information
