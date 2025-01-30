@@ -137,7 +137,7 @@ class TransactionRequest:
     customer: Optional[Customer] = None
     statement_description: Optional[StatementDescription] = None
     three_ds: Optional[ThreeDS] = None
-    previousNetworkTransactionId: Optional[str] = None
+    previous_network_transaction_id: Optional[str] = None
 
 
 # Response Models

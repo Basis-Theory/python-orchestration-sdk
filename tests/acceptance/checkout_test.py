@@ -115,7 +115,7 @@ async def test_storing_card_on_file():
                 'country': 'US'
             }
         },
-        'previousNetworkTransactionId': 'pay_123_test'
+        'previous_network_transaction_id': 'pay_123_test'
     }
 
     # Make the transaction request

@@ -114,7 +114,7 @@ async def test_storing_card_on_file():
                 'country': 'US'
             }
         },
-        'previousNetworkTransactionId': 'PGWC-123-TEST'
+        'previous_network_transaction_id': 'PGWC-123-TEST'
     }
 
     # Make the transaction request

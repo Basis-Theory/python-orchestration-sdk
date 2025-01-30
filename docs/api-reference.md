@@ -77,7 +77,7 @@ await sdk.[provider].transaction({
 | customer | Customer | No | None | Customer information |
 | three_ds | ThreeDS | No | None | 3DS authentication data |
 | merchant_initiated | bool | No | False | Whether the transaction is merchant-initiated |
-| previousNetworkTransactionId | str | No | None | Previous network transaction ID |
+| previous_network_transaction_id | str | No | None | Previous network transaction ID |
 
 ### Response
 
