@@ -115,6 +115,9 @@ class AdyenClient:
             "storePaymentMethod": request.source.store_with_provider,
         }
 
+        if request.metadata:
+            payload["metadata"] = request.metadata
+
         # Add reference if provided
         if request.reference:
             payload["reference"] = request.reference

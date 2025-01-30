@@ -183,6 +183,9 @@ class CheckoutClient:
             "reference": request.reference
         }
 
+        if request.metadata:
+            payload["metadata"] = request.metadata
+
         if request.type:
             payload["payment_type"] = RECURRING_TYPE_MAPPING.get(request.type)
 

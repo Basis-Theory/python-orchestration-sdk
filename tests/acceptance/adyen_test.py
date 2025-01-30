@@ -92,7 +92,7 @@ async def test_storing_card_on_file():
         'reference': str(uuid.uuid4()),  # Unique reference for the transaction
         'type': RecurringType.UNSCHEDULED,
         'amount': {
-            'value': 1,  # Amount in cents (10.00 in this case)
+            'value': 2000,  # Amount in cents (20.00 in this case)
             'currency': 'USD'
         },
         'source': {
@@ -113,6 +113,10 @@ async def test_storing_card_on_file():
                 'zip': '10001',
                 'country': 'US'
             }
+        },
+        'metadata': {
+            'order_id': '12345',
+            'customer_reference': 'cust_123'
         }
     }
 
