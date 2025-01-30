@@ -63,6 +63,11 @@ await sdk.[provider].transaction({
         'xid': 'MDAwMDAwMDAwMDAwMDAwMDAwMDE=',                  
         'version': '2.2.0',               
     },
+    'overrideProviderProperties': {
+        'additionalData": {
+            'risdata.userStatus': 'PGWC-123-TEST'
+        }
+    }
 })
 ```
 
@@ -77,6 +82,7 @@ await sdk.[provider].transaction({
 | customer | Customer | No | None | Customer information |
 | three_ds | ThreeDS | No | None | 3DS authentication data |
 | merchant_initiated | bool | No | False | Whether the transaction is merchant-initiated |
+| override_provider_properties | Dict[str, Any] | No | None | Appends and replaces any pre-mapped provider properties in the provider request |
 
 ### Response
 
@@ -87,9 +93,9 @@ await sdk.[provider].transaction({
 | amount | Amount | None | Amount details of the transaction |
 | status | TransactionStatus | None | Current status of the transaction |
 | source | TransactionSource | None | Source payment method details |
-| full_provider_response | Dict[str, Any] | None | Complete response from the payment provider |
-| created_at | datetime | None | Timestamp when transaction was created |
-| networkTransactionId | str | None | Network transaction identifier |
+| fullProviderResponse | Dict[str, Any] | None | Complete response from the payment provider |
+| createdt | datetime | None | Timestamp when transaction was created |
+| network_transaction_id | str | None | Network transaction identifier |
 
 
 ## Request Models
@@ -125,7 +131,7 @@ await sdk.[provider].transaction({
 | type | SourceType | - | Type of payment source (BASIS_THEORY_TOKEN, BASIS_THEORY_TOKEN_INTENT, or PROCESSOR_TOKEN) |
 | id | str | - | Identifier for the payment source |
 | store_with_provider | bool | False | Whether to store the payment source with the provider for future use |
-| holderName | str | None | Name of the card holder |
+| holder_name | str | None | Name of the card holder |
 
 ### Customer
 

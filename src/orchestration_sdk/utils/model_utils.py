@@ -51,7 +51,7 @@ def create_transaction_request(data: Dict[str, Any]) -> TransactionRequest:
             type=SourceType(data['source']['type']),
             id=data['source']['id'],
             store_with_provider=data['source'].get('store_with_provider', False),
-            holderName=data['source'].get('holderName')
+            holder_name=data['source'].get('holder_name')
         ),
         reference=data.get('reference'),
         merchant_initiated=data.get('merchant_initiated', False),
@@ -59,7 +59,8 @@ def create_transaction_request(data: Dict[str, Any]) -> TransactionRequest:
         customer=_create_customer(data.get('customer')) if 'customer' in data else None,
         statement_description=StatementDescription(**data['statement_description'])
         if 'statement_description' in data else None,
-        three_ds=_create_three_ds(data.get('3ds')) if '3ds' in data else None
+        three_ds=_create_three_ds(data.get('3ds')) if '3ds' in data else None,
+        override_provider_properties=data.get('override_provider_properties')
     )
 
 

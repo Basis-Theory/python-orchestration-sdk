@@ -38,27 +38,27 @@ class PaymentOrchestrationSDK:
         if cls._instance is None:
             cls._instance = cls()
 
-        if 'isTest' not in config:
-            raise ConfigurationError("'isTest' parameter is required")
-        if 'btApiKey' not in config:
-            raise ConfigurationError("'btApiKey' parameter is required")
-        if 'providerConfig' not in config:
-            raise ConfigurationError("'providerConfig' parameter is required")
+        if 'is_test' not in config:
+            config['is_test'] = False
+        if 'bt_api_key' not in config:
+            raise ConfigurationError("'bt_api_key' parameter is required")
+        if 'provider_config' not in config:
+            raise ConfigurationError("'provider_config' parameter is required")
 
         instance = cast(PaymentOrchestrationSDK, cls._instance)
-        instance.is_test = config['isTest']
-        instance.bt_api_key = config['btApiKey']
+        instance.is_test = config['is_test']
+        instance.bt_api_key = config['bt_api_key']
 
-        provider_config = config['providerConfig']
+        provider_config = config['provider_config']
         instance.provider_config = ProviderConfig()
 
         # Initialize Adyen configuration if provided
         if 'adyen' in provider_config:
             adyen_config = provider_config['adyen']
             instance.provider_config.adyen = AdyenConfig(
-                api_key=adyen_config['apiKey'],
-                merchant_account=adyen_config['merchantAccount'],
-                production_prefix=adyen_config.get('productionPrefix', "")
+                api_key=adyen_config['api_key'],
+                merchant_account=adyen_config['merchant_account'],
+                production_prefix=adyen_config.get('production_prefix', "")
             )
 
         # Initialize Checkout.com configuration if provided

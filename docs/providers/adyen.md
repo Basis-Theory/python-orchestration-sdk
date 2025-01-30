@@ -8,13 +8,13 @@ Configure Adyen in the SDK initialization, for additional information on initial
 
 ```python
 sdk = PaymentOrchestrationSDK.init({
-    'isTest': True,  # Set to False for production
-    'btApiKey': os.getenv('BASISTHEORY_API_KEY'),
-    'providerConfig': {
+    'is_test': True,  # Set to False for production
+    'bt_api_key': os.getenv('BASISTHEORY_API_KEY'),
+    'provider_config': {
         'adyen': {
-            'apiKey': os.getenv('ADYEN_API_KEY'),
-            'merchantAccount': os.getenv('ADYEN_MERCHANT_ACCOUNT'),
-            'productionPrefix': os.getenv('ADYEN_PRODUCTION_PREFIX')
+            'api_key': os.getenv('ADYEN_API_KEY'),
+            'merchant_account': os.getenv('ADYEN_MERCHANT_ACCOUNT'),
+            'production_prefix': os.getenv('ADYEN_PRODUCTION_PREFIX')
         }
     }
 })
@@ -24,9 +24,9 @@ sdk = PaymentOrchestrationSDK.init({
 
 | Credential | Property Name | Description |
 |------------|--------------|-------------|
-| Adyen API Key | apiKey | Your Adyen API key for authentication |
-| Merchant Account | merchantAccount | Your Adyen merchant account identifier |
-| Production Prefix | productionPrefix | Your Adyen production prefix |
+| Adyen API Key | api_key | Your Adyen API key for authentication |
+| Merchant Account | merchant_account | Your Adyen merchant account identifier |
+| Production Prefix | production_prefix | Your Adyen production prefix |
 
 
 You can obtain these credentials from your [Adyen Customer Area](https://ca-test.adyen.com/ca/ca/overview/default.shtml).
@@ -44,3 +44,18 @@ For testing, a few test card numbers are provided below, for a full list of test
 ## Transactions
 
 You will use the `sdk.adyen.transaction()` method to process transactions following the [TransactionRequest](../api-reference.md#transactionrequest) model.
+
+### Adyen Additional Data
+
+You can override any provider properties by passing the `override_provider_properties` property in the [TransactionRequest](../api-reference.md#transactionrequest) model. For example, to utilize [Adyen's Additional Data](https://docs.adyen.com/api-explorer/Checkout/latest/post/payments#request-additionalData), you can pass the following:
+
+```python
+override_provider_properties = {
+    "additionalData": {
+        "riskdata.userStatus": "userStatusTest",
+        "enhancedSchemeData.customerReference": "customerReferenceTest",
+        "autoRescue": "true",
+        "enhancedSchemeData.totalTaxAmount": "totalTaxAmountTest"
+    }
+}
+```

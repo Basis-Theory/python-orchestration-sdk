@@ -71,9 +71,9 @@ async def create_bt_token_intent(card_number: str = "4242424242424242"):
 
 def get_sdk(private_key = os.getenv('CHECKOUT_PRIVATE_KEY'), processing_channel = os.getenv('CHECKOUT_PROCESSING_CHANNEL')):
     return PaymentOrchestrationSDK.init({
-        'isTest': True,
-        'btApiKey': os.getenv('BASISTHEORY_API_KEY'),
-        'providerConfig': {
+        'is_test': True,
+        'bt_api_key': os.getenv('BASISTHEORY_API_KEY'),
+        'provider_config': {
             'checkout': {
                 'private_key': private_key,
                 'processing_channel': processing_channel
@@ -100,7 +100,7 @@ async def test_storing_card_on_file():
             'type': 'basis_theory_token',
             'id': token_id,
             'store_with_provider': True,
-            'holderName': 'John Doe'
+            'holder_name': 'John Doe'
         },
         'customer': {
             'reference': str(uuid.uuid4()),
@@ -152,9 +152,9 @@ async def test_storing_card_on_file():
     assert 'id' in response['source']['provisioned']
 
     # Validate networkTransactionId
-    assert 'networkTransactionId' in response
-    assert isinstance(response['networkTransactionId'], str)
-    assert len(response['networkTransactionId']) > 0
+    assert 'network_transaction_id' in response
+    assert isinstance(response['network_transaction_id'], str)
+    assert len(response['network_transaction_id']) > 0
     
     # Validate other fields
     assert 'full_provider_response' in response
@@ -231,9 +231,9 @@ async def test_not_storing_card_on_file():
     assert isinstance(response['full_provider_response'], dict)
 
     # Validate networkTransactionId
-    assert 'networkTransactionId' in response
-    assert isinstance(response['networkTransactionId'], str)
-    assert len(response['networkTransactionId']) > 0
+    assert 'network_transaction_id' in response
+    assert isinstance(response['network_transaction_id'], str)
+    assert len(response['network_transaction_id']) > 0
 
 @pytest.mark.asyncio
 async def test_with_three_ds():
@@ -310,9 +310,9 @@ async def test_with_three_ds():
     assert isinstance(response['full_provider_response'], dict)
 
     # Validate networkTransactionId
-    assert 'networkTransactionId' in response
-    assert isinstance(response['networkTransactionId'], str)
-    assert len(response['networkTransactionId']) > 0
+    assert 'network_transaction_id' in response
+    assert isinstance(response['network_transaction_id'], str)
+    assert len(response['network_transaction_id']) > 0
 
 @pytest.mark.asyncio
 async def test_error_expired_card():
@@ -395,7 +395,7 @@ async def test_error_invalid_api_key():
             'type': 'basis_theory_token',
             'id': token_id,
             'store_with_provider': False,
-            'holderName': 'CARD_EXPIRED'
+            'holder_name': 'CARD_EXPIRED'
         },
         'customer': {
             'reference': str(uuid.uuid4()),
@@ -490,9 +490,9 @@ async def test_token_intents_charge_not_storing_card_on_file():
     assert isinstance(response['full_provider_response'], dict)
 
     # Validate networkTransactionId
-    assert 'networkTransactionId' in response
-    assert isinstance(response['networkTransactionId'], str)
-    assert len(response['networkTransactionId']) > 0
+    assert 'network_transaction_id' in response
+    assert isinstance(response['network_transaction_id'], str)
+    assert len(response['network_transaction_id']) > 0
 
 @pytest.mark.asyncio
 async def test_processor_token_charge_not_storing_card_on_file(): 
@@ -513,7 +513,7 @@ async def test_processor_token_charge_not_storing_card_on_file():
             'type': 'basis_theory_token_intent',
             'id': token_intent_id,
             'store_with_provider': True,
-            'holderName': 'John Doe'
+            'holder_name': 'John Doe'
         },
         'customer': {
             'reference': str(uuid.uuid4()),
@@ -589,6 +589,45 @@ async def test_processor_token_charge_not_storing_card_on_file():
     assert isinstance(response['full_provider_response'], dict)
 
     # Validate networkTransactionId
-    assert 'networkTransactionId' in response
-    assert isinstance(response['networkTransactionId'], str)
-    assert len(response['networkTransactionId']) > 0
+    assert 'network_transaction_id' in response
+    assert isinstance(response['network_transaction_id'], str)
+    assert len(response['network_transaction_id']) > 0
+
+@pytest.mark.asyncio
+async def test_override_provider_properties():
+    # Create a Basis Theory token
+    token_id = await create_bt_token()
+
+    # Initialize the SDK with environment variables
+    sdk = get_sdk()
+
+    transaction_request = {
+        'reference': str(uuid.uuid4()),  # Unique reference for the transaction
+        'type': RecurringType.ONE_TIME,
+        'amount': {
+            'value': 1,  # Amount in cents (10.00 in this case)
+            'currency': 'USD'
+        },
+        'source': {
+            'type': 'basis_theory_token',
+            'id': token_id,
+            'store_with_provider': False
+        },
+        'customer': {
+            'reference': str(uuid.uuid4()),
+        },
+        'override_provider_properties': {
+            'amount': 9999
+        }
+    }
+
+    # Make the transaction request
+    response = await sdk.checkout.transaction(transaction_request)
+
+    # Validate amount
+    assert 'amount' in response
+    assert isinstance(response['amount'], dict)
+    assert 'value' in response['amount']
+    assert 'currency' in response['amount']
+    assert response['amount']['value'] == 9999
+    assert response['amount']['currency'] == 'USD'

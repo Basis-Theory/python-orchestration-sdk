@@ -69,12 +69,12 @@ async def create_bt_token_intent(card_number: str = "4111111145551142"):
 
 def get_sdk(api_key = os.getenv('ADYEN_API_KEY'), merchant_account = os.getenv('ADYEN_MERCHANT_ACCOUNT')):
     return PaymentOrchestrationSDK.init({
-        'isTest': True,
-        'btApiKey': os.getenv('BASISTHEORY_API_KEY'),
-        'providerConfig': {
+        'is_test': True,
+        'bt_api_key': os.getenv('BASISTHEORY_API_KEY'),
+        'provider_config': {
             'adyen': {
-                'apiKey': api_key,
-                'merchantAccount': merchant_account,
+                'api_key': api_key,
+                'merchant_account': merchant_account,
             }
         }
     })
@@ -99,7 +99,7 @@ async def test_storing_card_on_file():
             'type': 'basis_theory_token',
             'id': token_id,
             'store_with_provider': True,
-            'holderName': 'John Doe'
+            'holder_name': 'John Doe'
         },
         'customer': {
             'reference': str(uuid.uuid4()),
@@ -167,9 +167,9 @@ async def test_storing_card_on_file():
         pytest.fail("created_at is not a valid ISO datetime string")
 
     # Validate networkTransactionId
-    assert 'networkTransactionId' in response
-    assert isinstance(response['networkTransactionId'], str)
-    assert len(response['networkTransactionId']) > 0
+    assert 'network_transaction_id' in response
+    assert isinstance(response['network_transaction_id'], str)
+    assert len(response['network_transaction_id']) > 0
 
 @pytest.mark.asyncio
 async def test_not_storing_card_on_file():
@@ -234,9 +234,9 @@ async def test_not_storing_card_on_file():
     assert isinstance(response['full_provider_response'], dict)
 
     # Validate networkTransactionId
-    assert 'networkTransactionId' in response
-    assert isinstance(response['networkTransactionId'], str)
-    assert len(response['networkTransactionId']) > 0
+    assert 'network_transaction_id' in response
+    assert isinstance(response['network_transaction_id'], str)
+    assert len(response['network_transaction_id']) > 0
 
 @pytest.mark.asyncio
 async def test_with_three_ds():
@@ -307,9 +307,9 @@ async def test_with_three_ds():
     assert isinstance(response['full_provider_response'], dict)
 
     # Validate networkTransactionId
-    assert 'networkTransactionId' in response
-    assert isinstance(response['networkTransactionId'], str)
-    assert len(response['networkTransactionId']) > 0
+    assert 'network_transaction_id' in response
+    assert isinstance(response['network_transaction_id'], str)
+    assert len(response['network_transaction_id']) > 0
 
 @pytest.mark.asyncio
 async def test_error_expired_card():
@@ -331,7 +331,7 @@ async def test_error_expired_card():
             'type': 'basis_theory_token',
             'id': token_id,
             'store_with_provider': False,
-            'holderName': 'CARD_EXPIRED'
+            'holder_name': 'CARD_EXPIRED'
         },
         'customer': {
             'reference': str(uuid.uuid4()),
@@ -388,7 +388,7 @@ async def test_error_invalid_api_key():
             'type': 'basis_theory_token',
             'id': token_id,
             'store_with_provider': False,
-            'holderName': 'CARD_EXPIRED'
+            'holder_name': 'CARD_EXPIRED'
         },
         'customer': {
             'reference': str(uuid.uuid4()),
@@ -449,6 +449,14 @@ async def test_token_intents_charge_not_storing_card_on_file():
         },
         'customer': {
             'reference': str(uuid.uuid4()),
+        },
+        'override_provider_properties': {
+            "additionalData": {
+                "riskdata.userStatus": "userStatusTest",
+                "enhancedSchemeData.customerReference": "customerReferenceTest",
+                "autoRescue": "true",
+                "enhancedSchemeData.totalTaxAmount": "totalTaxAmountTest"
+            }
         }
     }
 
@@ -489,9 +497,9 @@ async def test_token_intents_charge_not_storing_card_on_file():
     assert isinstance(response['full_provider_response'], dict)
 
     # Validate networkTransactionId
-    assert 'networkTransactionId' in response
-    assert isinstance(response['networkTransactionId'], str)
-    assert len(response['networkTransactionId']) > 0
+    assert 'network_transaction_id' in response
+    assert isinstance(response['network_transaction_id'], str)
+    assert len(response['network_transaction_id']) > 0
 
 @pytest.mark.asyncio
 async def test_processor_token_charge_not_storing_card_on_file(): 
@@ -556,6 +564,6 @@ async def test_processor_token_charge_not_storing_card_on_file():
     assert isinstance(response['full_provider_response'], dict)
 
     # Validate networkTransactionId
-    assert 'networkTransactionId' in response
-    assert isinstance(response['networkTransactionId'], str)
-    assert len(response['networkTransactionId']) > 0
+    assert 'network_transaction_id' in response
+    assert isinstance(response['network_transaction_id'], str)
+    assert len(response['network_transaction_id']) > 0
