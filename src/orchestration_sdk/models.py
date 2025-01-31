@@ -141,6 +141,12 @@ class TransactionRequest:
     statement_description: Optional[StatementDescription] = None
     three_ds: Optional[ThreeDS] = None
 
+@dataclass
+class RefundRequest:
+    original_transaction_id: str
+    reference: str
+    amount: Amount
+    metadata: Optional[Dict[str, Any]] = None
 
 # Response Models
 @dataclass
@@ -173,13 +179,30 @@ class TransactionResponse:
 
 
 @dataclass
+class RefundResponse:
+    id: str
+    reference: str
+    amount: Amount
+    status: TransactionStatus
+    full_provider_response: Dict[str, Any]
+    created_at: datetime
+
+
+@dataclass
 class ErrorCode:
     category: str
     code: str
-
 
 @dataclass
 class ErrorResponse:
     error_codes: List[ErrorCode]
     provider_errors: List[str]
-    full_provider_response: Dict[str, Any] 
+    full_provider_response: Dict[str, Any]
+
+
+class TransactionException(Exception):
+    error_response: ErrorResponse
+    def __init__(self, error_response: 'ErrorResponse'):
+        self.error_response = error_response
+        super().__init__(str(error_response.error_codes))
+

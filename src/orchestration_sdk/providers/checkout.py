@@ -1,5 +1,5 @@
 from typing import Dict, Any, Tuple, Optional, Union, cast
-from datetime import datetime
+from datetime import datetime, timezone
 import requests
 import os
 import json
@@ -17,7 +17,13 @@ from ..models import (
     RecurringType,
     TransactionStatusCode,
     ErrorType,
-    ErrorCategory
+    ErrorCategory,
+    RefundRequest,
+    RefundResponse,
+    TransactionStatus,
+    ErrorResponse,
+    TransactionException,
+    ErrorCode
 )
 from ..exceptions import ValidationError, ProcessingError
 from ..utils.model_utils import create_transaction_request, validate_required_fields
@@ -298,6 +304,13 @@ class CheckoutClient:
             "code": error.code
         }
 
+    def _get_error_code_object(self, error: ErrorType) -> ErrorCode:
+        return ErrorCode(
+            category=error.category,
+            code=error.code
+        )
+
+
     def _transform_error_response(self, response, error_data=None):
         """Transform error response from Checkout.com to SDK format."""
         error_codes = []
@@ -321,6 +334,31 @@ class CheckoutClient:
             "provider_errors": error_data.get('error_codes', []) if error_data else [],
             "full_provider_response": error_data
         }
+
+    def _transform_error_response_object(self, response, error_data=None) -> ErrorResponse:
+        """Transform error response from Checkout.com to SDK format."""
+        error_codes = []
+        
+        if response.status_code == 401:
+            error_codes.append(self._get_error_code_object(ErrorType.INVALID_API_KEY))
+        elif response.status_code == 403:
+            error_codes.append(self._get_error_code_object(ErrorType.UNAUTHORIZED))
+        elif error_data is not None:
+            for error_code in error_data.get('error_codes', []):
+                mapped_error = ERROR_CODE_MAPPING.get(error_code, ErrorType.OTHER)
+                error_codes.append(self._get_error_code_object(mapped_error))
+
+            if not error_codes:
+                error_codes.append(self._get_error_code_object(ErrorType.OTHER))
+        else:
+            error_codes.append(self._get_error_code_object(ErrorType.OTHER))
+        
+        return ErrorResponse(
+            error_codes=error_codes,
+            provider_errors=error_data.get('error_codes', []) if error_data else [],
+            full_provider_response=error_data
+        )
+
 
     async def transaction(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process a payment transaction through Checkout.com's API directly or via Basis Theory's proxy."""
@@ -356,26 +394,19 @@ class CheckoutClient:
             except:
                 error_data = None
 
-            return self._transform_error_response(e.response, error_data)
+            raise TransactionException(self._transform_error_response_object(e.response, error_data))
 
         # Transform response to SDK format
         return self._transform_checkout_response(response.json(), request)
 
-    async def refund_transaction(self, transaction_id: str, refund_request: Dict[str, Any]) -> Dict[str, Any]:
+    async def refund_transaction(self, refund_request: RefundRequest) -> RefundResponse:
         """
         Refund a payment transaction through Checkout.com's API.
         
         Args:
-            transaction_id (str): The ID of the transaction to refund
-            refund_request (Dict[str, Any]): The refund request data containing:
-                - reference (str): Your reference for the refund
-                - amount (Dict[str, Any]): Optional amount to refund
-                    - value (int): The amount to refund in minor currency units
-                    - currency (str): The currency of the refund
-                - metadata (Dict[str, Any]): Optional metadata for the refund
-        
+            refund_request (RefundRequest)
         Returns:
-            Dict[str, Any]: The refund response
+            Union[RefundResponse, ErrorResponse]: The refund response or error response
         """
         # Set up headers
         headers = {
@@ -385,18 +416,19 @@ class CheckoutClient:
 
         # Prepare the refund payload
         payload = {
-            "reference": refund_request.get('reference'),
-            "amount": refund_request.get('amount')
+            "reference": refund_request.reference,
+            "amount": refund_request.amount.value,
+            "currency": refund_request.amount.currency
         }
 
         # Add metadata if provided
-        if 'metadata' in refund_request:
-            payload['metadata'] = refund_request['metadata']
+        if refund_request.metadata:
+            payload['metadata'] = refund_request.metadata
 
         try:
             # Make request to Checkout.com
             response = self.request_client.request(
-                url=f"{self.base_url}/payments/{transaction_id}/refunds",
+                url=f"{self.base_url}/payments/{refund_request.original_transaction_id}/refunds",
                 method="POST",
                 headers=headers,
                 data=payload,
@@ -406,14 +438,14 @@ class CheckoutClient:
             response_data = response.json()
             
             # Transform the response to a standardized format
-            return {
-                "id": response_data.get('action_id'),
-                "reference": response_data.get('reference'),
-                "status": {
-                    "code": TransactionStatusCode.REFUNDED,
-                },
-                "full_provider_response": response_data
-            }
+            return RefundResponse(
+                id=response_data.get('action_id'),
+                reference=response_data.get('reference'),
+                amount=Amount(value=response_data.get('amount'), currency=response_data.get('currency')),
+                status=TransactionStatus(code=TransactionStatusCode.REFUNDED, provider_code=""),
+                full_provider_response=response_data,
+                created_at=datetime.now(timezone.utc).isoformat()
+            )
 
         except requests.exceptions.HTTPError as e:
             try:
@@ -421,5 +453,5 @@ class CheckoutClient:
             except:
                 error_data = None
 
-            return self._transform_error_response(e.response, error_data)
+            raise TransactionException(self._transform_error_response_object(e.response, error_data))
             

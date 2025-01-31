@@ -17,7 +17,11 @@ from orchestration_sdk.models import (
     TransactionStatusCode,
     RecurringType,
     ErrorCategory,
-    ErrorType
+    ErrorType,
+    RefundRequest,
+    RefundResponse,
+    Amount,
+    TransactionException
 )
 
 # Load environment variables from .env file
@@ -349,32 +353,31 @@ async def test_error_expired_card():
 
     print(f"Transaction request: {transaction_request}")
 
-    # Make the transaction request
-    response = await sdk.checkout.transaction(transaction_request)
-    print(f"Response: {json.dumps(response['full_provider_response'], indent=2)}")
+    # Make the transaction request and expect a TransactionException
+    with pytest.raises(TransactionException) as exc_info:
+        await sdk.checkout.transaction(transaction_request)
+
+    # Get the error response from the exception
+    error_response = exc_info.value.error_response
+    print(f"Error Response: {json.dumps(error_response.full_provider_response, indent=2)}")
 
     # Validate error response structure
-    assert isinstance(response, dict)
-    assert 'error_codes' in response
-    assert isinstance(response['error_codes'], list)
-    assert len(response['error_codes']) == 1
+    assert len(error_response.error_codes) == 1
     
     # Verify exact error code values
-    error = response['error_codes'][0]
-    assert error['category'] == ErrorCategory.PAYMENT_METHOD_ERROR
-    assert error['code'] == ErrorType.EXPIRED_CARD.code
+    error = error_response.error_codes[0]
+    assert error.category == ErrorCategory.PAYMENT_METHOD_ERROR
+    assert error.code == ErrorType.EXPIRED_CARD.code
     
     # Verify provider errors
-    assert 'provider_errors' in response
-    assert isinstance(response['provider_errors'], list)
-    assert len(response['provider_errors']) == 1
-    assert response['provider_errors'] == ['card_expired']
+    assert isinstance(error_response.provider_errors, list)
+    assert len(error_response.provider_errors) == 1
+    assert error_response.provider_errors == ['card_expired']
     
     # Verify full provider response
-    assert 'full_provider_response' in response
-    assert isinstance(response['full_provider_response'], dict)
-    assert response['full_provider_response']['error_type'] == 'processing_error'
-    assert response['full_provider_response']['error_codes'] == ['card_expired']
+    assert isinstance(error_response.full_provider_response, dict)
+    assert error_response.full_provider_response['error_type'] == 'processing_error'
+    assert error_response.full_provider_response['error_codes'] == ['card_expired']
 
 @pytest.mark.asyncio
 async def test_error_invalid_api_key():
@@ -405,29 +408,28 @@ async def test_error_invalid_api_key():
 
     print(f"Transaction request: {transaction_request}")
 
-    # Make the transaction request
-    response = await sdk.checkout.transaction(transaction_request)
-    print(f"Response: {response}")
+    # Make the transaction request and expect a TransactionException
+    with pytest.raises(TransactionException) as exc_info:
+        await sdk.checkout.transaction(transaction_request)
+
+    # Get the error response from the exception
+    error_response = exc_info.value.error_response
+    print(f"Error Response: {error_response}")
 
     # Validate error response structure
-    assert isinstance(response, dict)
-    assert 'error_codes' in response
-    assert isinstance(response['error_codes'], list)
-    assert len(response['error_codes']) == 1
+    assert len(error_response.error_codes) == 1
     
     # Verify exact error code values
-    error = response['error_codes'][0]
-    assert error['category'] == ErrorCategory.OTHER
-    assert error['code'] == ErrorType.INVALID_API_KEY.code
+    error = error_response.error_codes[0]
+    assert error.category == ErrorCategory.OTHER
+    assert error.code == ErrorType.INVALID_API_KEY.code
     
     # Verify provider errors
-    assert 'provider_errors' in response
-    assert isinstance(response['provider_errors'], list)
-    assert len(response['provider_errors']) == 0
-
+    assert isinstance(error_response.provider_errors, list)
+    assert len(error_response.provider_errors) == 0
     
     # Verify full provider response
-    assert 'full_provider_response' in response
+    assert error_response.full_provider_response is None
 
 @pytest.mark.asyncio
 async def test_token_intents_charge_not_storing_card_on_file(): 
@@ -624,17 +626,18 @@ async def test_partial_refund():
     # Make the transaction request
     response = await sdk.checkout.transaction(transaction_request)
     
-    refund_request = {
-        'reference': f"{transaction_request.get('reference')}_refund",
-        'amount': 500
-    }
+    refund_request = RefundRequest(
+        original_transaction_id=response['id'],
+        reference=f"{transaction_request.get('reference')}_refund",
+        amount=Amount(value=500, currency='USD')
+    )
 
     # Process the refund
-    refund_response = await sdk.checkout.refund_transaction(response['id'], refund_request)
+    refund_response = await sdk.checkout.refund_transaction(refund_request)
 
     # Verify refund succeeded
-    assert refund_response.get('reference') == refund_request.get('reference')
-    assert refund_response.get('status').get('code') == TransactionStatusCode.REFUNDED
+    assert refund_response.reference == refund_request.reference
+    assert refund_response.status.code == TransactionStatusCode.REFUNDED
 
 @pytest.mark.asyncio
 async def test_failed_refund():
@@ -665,17 +668,21 @@ async def test_failed_refund():
     # Make the transaction request
     response = await sdk.checkout.transaction(transaction_request)
     
-    refund_request = {
-        'reference': f"{transaction_request.get('reference')}_refund",
-        'amount': 3738
-    }
-    
-    # Process the refund
-    refund_response = await sdk.checkout.refund_transaction(response['id'], refund_request)
+    refund_request = RefundRequest(
+        original_transaction_id=response['id'],
+        reference=f"{transaction_request.get('reference')}_refund",
+        amount=Amount(value=3738, currency='USD')
+    )
+    # Process the refund and expect a TransactionException
+    with pytest.raises(TransactionException) as exc_info:
+        await sdk.checkout.refund_transaction(refund_request)
+
+    # Get the error response from the exception
+    error_response = exc_info.value.error_response
 
     # Verify refund failed with correct error
-    assert refund_response.get('error_codes')[0].get('category') == ErrorCategory.PROCESSING_ERROR
-    assert refund_response.get('error_codes')[0].get('code') == 'refund_declined'
+    assert error_response.error_codes[0].category == ErrorCategory.PROCESSING_ERROR
+    assert error_response.error_codes[0].code == 'refund_declined'
 
 
 @pytest.mark.asyncio
@@ -707,17 +714,22 @@ async def test_failed_refund_amount_exceeds_balance():
     # Make the transaction request
     response = await sdk.checkout.transaction(transaction_request)
     
-    refund_request = {
-        'reference': f"{transaction_request.get('reference')}_refund",
-        'amount': 200
-    }
+    refund_request = RefundRequest(
+        original_transaction_id=response['id'],
+        reference=f"{transaction_request.get('reference')}_refund",
+        amount=Amount(value=200, currency='USD')
+    )
     
-    # Process the refund
-    refund_response = await sdk.checkout.refund_transaction(response['id'], refund_request)
+    # Process the refund and expect a TransactionException
+    with pytest.raises(TransactionException) as exc_info:
+        await sdk.checkout.refund_transaction(refund_request)
+
+    # Get the error response from the exception
+    error_response = exc_info.value.error_response
 
     # Verify refund failed with correct error
-    assert refund_response.get('error_codes')[0].get('category') == ErrorCategory.PROCESSING_ERROR
-    assert refund_response.get('error_codes')[0].get('code') == 'refund_amount_exceeds_balance'
+    assert error_response.error_codes[0].category == ErrorCategory.PROCESSING_ERROR
+    assert error_response.error_codes[0].code == 'refund_amount_exceeds_balance'
 
 
 async def run_transactions_for_list(channel, transactions):
