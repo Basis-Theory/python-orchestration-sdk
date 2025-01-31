@@ -40,12 +40,12 @@ async def test_successful_transaction():
 
     # Initialize the SDK
     sdk = PaymentOrchestrationSDK.init({
-        'isTest': True,
-        'btApiKey': 'test_bt_api_key',
-        'providerConfig': {
+        'is_test': True,
+        'bt_api_key': 'test_bt_api_key',
+        'provider_config': {
             'adyen': {
-                'apiKey': 'test_adyen_api_key',
-                'merchantAccount': 'test_merchant',
+                'api_key': 'test_adyen_api_key',
+                'merchant_account': 'test_merchant',
             }
         }
     })
@@ -109,12 +109,12 @@ async def test_invalid_api_key_error():
 
     # Initialize the SDK
     sdk = PaymentOrchestrationSDK.init({
-        'isTest': True,
-        'btApiKey': 'test_bt_api_key',
-        'providerConfig': {
+        'is_test': True,
+        'bt_api_key': 'test_bt_api_key',
+        'provider_config': {
             'adyen': {
-                'apiKey': 'invalid_api_key',
-                'merchantAccount': 'test_merchant',
+                'api_key': 'invalid_api_key',
+                'merchant_account': 'test_merchant',
             }
         }
     })
@@ -163,12 +163,12 @@ async def test_unauthorized_error():
 
     # Initialize the SDK
     sdk = PaymentOrchestrationSDK.init({
-        'isTest': True,
-        'btApiKey': 'test_bt_api_key',
-        'providerConfig': {
+        'is_test': True,
+        'bt_api_key': 'test_bt_api_key',
+        'provider_config': {
             'adyen': {
-                'apiKey': 'test_adyen_api_key',
-                'merchantAccount': 'test_merchant',
+                'api_key': 'test_adyen_api_key',
+                'merchant_account': 'test_merchant',
             }
         }
     })
@@ -250,12 +250,12 @@ async def test_errors():
 
     # Initialize the SDK
     sdk = PaymentOrchestrationSDK.init({
-        'isTest': True,
-        'btApiKey': 'test_bt_api_key',
-        'providerConfig': {
+        'is_test': True,
+        'bt_api_key': 'test_bt_api_key',
+        'provider_config': {
             'adyen': {
-                'apiKey': 'test_adyen_api_key',
-                'merchantAccount': 'test_merchant',
+                'api_key': 'test_adyen_api_key',
+                'merchant_account': 'test_merchant',
             }
         }
     })

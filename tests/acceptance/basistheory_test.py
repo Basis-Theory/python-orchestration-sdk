@@ -22,12 +22,12 @@ load_dotenv()
 async def test_error_invalid_api_key():
     # Initialize the SDK with environment variables
     sdk = PaymentOrchestrationSDK.init({
-        'isTest': True,
-        'btApiKey': "invalid",
-        'providerConfig': {
+        'is_test': True,
+        'bt_api_key': "invalid",
+        'provider_config': {
             'adyen': {
-                'apiKey': "invalid",
-                'merchantAccount': "nope",
+                'api_key': "invalid",
+                'merchant_account': "nope",
             }
         }
     })
@@ -44,7 +44,7 @@ async def test_error_invalid_api_key():
             'type': 'basis_theory_token',
             'id': '46f2f39e-6c33-457c-a64e-292c55c2ddc9',  # Replace with a real stored payment method ID
             'store_with_provider': False,
-            'holderName': 'CARD_EXPIRED'
+            'holder_name': 'CARD_EXPIRED'
         },
         'customer': {
             'reference': str(uuid.uuid4()),
