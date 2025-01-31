@@ -137,6 +137,7 @@ class TransactionRequest:
     customer: Optional[Customer] = None
     statement_description: Optional[StatementDescription] = None
     three_ds: Optional[ThreeDS] = None
+    metadata: Optional[Dict[str, str]] = None
 
 
 # Response Models
