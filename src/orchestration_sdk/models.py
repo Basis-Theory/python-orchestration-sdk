@@ -91,7 +91,7 @@ class Source:
     type: SourceType
     id: str
     store_with_provider: bool = False
-    holderName: Optional[str] = None
+    holder_name: Optional[str] = None
 
 
 @dataclass
@@ -137,6 +137,7 @@ class TransactionRequest:
     customer: Optional[Customer] = None
     statement_description: Optional[StatementDescription] = None
     three_ds: Optional[ThreeDS] = None
+    override_provider_properties: Optional[Dict[str, Any]] = None
     metadata: Optional[Dict[str, str]] = None
 
 
@@ -167,7 +168,7 @@ class TransactionResponse:
     source: TransactionSource
     full_provider_response: Dict[str, Any]
     created_at: datetime
-    networkTransactionId: Optional[str] = None 
+    network_transaction_id: Optional[str] = None 
 
 
 @dataclass

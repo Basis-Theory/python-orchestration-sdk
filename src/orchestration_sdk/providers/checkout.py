@@ -1,5 +1,6 @@
 from typing import Dict, Any, Tuple, Optional, Union, cast
 from datetime import datetime
+from deepmerge import always_merger
 import requests
 import os
 import json
@@ -266,6 +267,12 @@ class CheckoutClient:
                 three_ds_data["version"] = request.three_ds.version
             payload["3ds"] = three_ds_data
 
+        # Override/merge any provider properties if specified
+        if request.override_provider_properties:
+            payload = always_merger.merge(payload, request.override_provider_properties)
+
+        print(f"Payload: {json.dumps(payload, indent=2)}")
+
         return payload
 
     def _transform_checkout_response(self, response_data: Dict[str, Any], request: TransactionRequest) -> Dict[str, Any]:
@@ -289,8 +296,8 @@ class CheckoutClient:
                 } if response_data.get("source", {}).get("id") else None
             },
             "full_provider_response": response_data,
-            "created_at": datetime.fromisoformat(response_data["processed_on"].split(".")[0] + "+00:00").isoformat("T", "milliseconds") if response_data.get("processed_on") else None,
-            "networkTransactionId": response_data.get("processing", {}).get("acquirer_transaction_id")
+            "created_at": datetime.fromisoformat(response_data.get("processed_on", {}).split(".")[0] + "+00:00").isoformat("T", "milliseconds") if response_data.get("processed_on") else None,
+            "network_transaction_id": response_data.get("processing", {}).get("acquirer_transaction_id")
         }
 
     def _get_error_code(self, error: ErrorType) -> Dict[str, Any]:

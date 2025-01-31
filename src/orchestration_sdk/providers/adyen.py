@@ -1,7 +1,7 @@
 from typing import Dict, Any, Tuple, Optional, Union, cast
 from datetime import datetime, timezone
 import requests
-
+from deepmerge import always_merger
 from ..models import (
     TransactionRequest,
     Amount,
@@ -133,8 +133,8 @@ class AdyenClient:
         
         if request.source.type == SourceType.PROCESSOR_TOKEN:
             payment_method["storedPaymentMethodId"] = request.source.id
-            if request.source.holderName:
-                payment_method["holderName"] = request.source.holderName
+            if request.source.holder_name:
+                payment_method["holderName"] = request.source.holder_name
         elif request.source.type in [SourceType.BASIS_THEORY_TOKEN, SourceType.BASIS_THEORY_TOKEN_INTENT]:
             # Add card data with Basis Theory expressions
             token_prefix = "token_intent" if request.source.type == SourceType.BASIS_THEORY_TOKEN_INTENT else "token"
@@ -144,8 +144,8 @@ class AdyenClient:
                 "expiryYear": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.expiration_year'}}}}",
                 "cvc": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.cvc'}}}}"
             })
-            if request.source.holderName:
-                payment_method["holderName"] = request.source.holderName
+            if request.source.holder_name:
+                payment_method["holderName"] = request.source.holder_name
 
         payload["paymentMethod"] = payment_method
 
@@ -214,6 +214,10 @@ class AdyenClient:
             if three_ds_data:
                 payload["additionalData"] = {"threeDSecure": three_ds_data}
 
+        # Override/merge any provider properties if specified
+        if request.override_provider_properties:
+            payload = always_merger.merge(payload, request.override_provider_properties)
+
         return payload
 
     def _transform_adyen_response(self, response_data: Dict[str, Any], request: TransactionRequest) -> Dict[str, Any]:
@@ -232,14 +236,13 @@ class AdyenClient:
             "source": {
                 "type": request.source.type,
                 "id": request.source.id,
-                # checking both as recurringDetailReference is deprecated, although it still appears without storedPaymentMethodId
                 "provisioned": {
                     "id": response_data.get("paymentMethod", {}).get("storedPaymentMethodId") or 
                          response_data.get("additionalData", {}).get("recurring.recurringDetailReference")
                 } if (response_data.get("paymentMethod", {}).get("storedPaymentMethodId") or 
                       response_data.get("additionalData", {}).get("recurring.recurringDetailReference")) else None
             },
-            "networkTransactionId": response_data.get("additionalData", {}).get("networkTxReference"),
+            "network_transaction_id": response_data.get("additionalData", {}).get("networkTxReference"),
             "full_provider_response": response_data,
             "created_at": datetime.now(timezone.utc).isoformat()
         }

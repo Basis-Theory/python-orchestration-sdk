@@ -23,9 +23,9 @@ def validate_required_fields(data: Dict[str, Any]) -> None:
     Raises:
         ValidationError: If required fields are missing
     """
-    if 'amount' not in data or 'value' not in data['amount']:
+    if 'amount' not in data or 'value' not in data.get('amount', {}):
         raise ValidationError("amount.value is required")
-    if 'source' not in data or 'type' not in data['source'] or 'id' not in data['source']:
+    if 'source' not in data or 'type' not in data.get('source', {}) or 'id' not in data.get('source', {}):
         raise ValidationError("source.type and source.id are required")
 
 
@@ -44,22 +44,23 @@ def create_transaction_request(data: Dict[str, Any]) -> TransactionRequest:
     """
     return TransactionRequest(
         amount=Amount(
-            value=data['amount']['value'],
-            currency=data['amount'].get('currency', 'USD')
+            value=data.get('amount', {}).get('value', 0),
+            currency=data.get('amount', {}).get('currency', 'USD')
         ),
         source=Source(
-            type=SourceType(data['source']['type']),
-            id=data['source']['id'],
-            store_with_provider=data['source'].get('store_with_provider', False),
-            holderName=data['source'].get('holderName')
+            type=SourceType(data.get('source', {}).get('type', '')),
+            id=data.get('source', {}).get('id', ''),
+            store_with_provider=data.get('source', {}).get('store_with_provider', False),
+            holder_name=data.get('source', {}).get('holder_name', '')
         ),
         reference=data.get('reference'),
         merchant_initiated=data.get('merchant_initiated', False),
-        type=RecurringType(data['type']) if 'type' in data else None,
+        type=RecurringType(data.get('type', '')) if 'type' in data else None,
         customer=_create_customer(data.get('customer')) if 'customer' in data else None,
-        statement_description=StatementDescription(**data['statement_description'])
+        statement_description=StatementDescription(**data.get('statement_description', {}))
         if 'statement_description' in data else None,
-        three_ds=_create_three_ds(data.get('3ds')) if '3ds' in data else None
+        three_ds=_create_three_ds(data.get('3ds')) if '3ds' in data else None,
+        override_provider_properties=data.get('override_provider_properties')
     )
 
 
