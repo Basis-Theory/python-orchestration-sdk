@@ -54,19 +54,19 @@ class PaymentOrchestrationSDK:
 
         # Initialize Adyen configuration if provided
         if 'adyen' in provider_config:
-            adyen_config = provider_config['adyen']
+            adyen_config = provider_config.get('adyen')
             instance.provider_config.adyen = AdyenConfig(
-                api_key=adyen_config['api_key'],
-                merchant_account=adyen_config['merchant_account'],
+                api_key=adyen_config.get('api_key'),
+                merchant_account=adyen_config.get('merchant_account'),
                 production_prefix=adyen_config.get('production_prefix', "")
             )
 
         # Initialize Checkout.com configuration if provided
         if 'checkout' in provider_config:
-            checkout_config = provider_config['checkout']
+            checkout_config = provider_config.get('checkout')
             instance.provider_config.checkout = CheckoutConfig(
-                private_key=checkout_config['private_key'],
-                processing_channel=checkout_config['processing_channel']
+                private_key=checkout_config.get('private_key'),
+                processing_channel=checkout_config.get('processing_channel')
             )
 
         return instance

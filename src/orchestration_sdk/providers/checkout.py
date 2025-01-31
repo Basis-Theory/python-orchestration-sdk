@@ -293,7 +293,7 @@ class CheckoutClient:
                 } if response_data.get("source", {}).get("id") else None
             },
             "full_provider_response": response_data,
-            "created_at": datetime.fromisoformat(response_data["processed_on"].split(".")[0] + "+00:00").isoformat("T", "milliseconds") if response_data.get("processed_on") else None,
+            "created_at": datetime.fromisoformat(response_data.get("processed_on", {}).split(".")[0] + "+00:00").isoformat("T", "milliseconds") if response_data.get("processed_on") else None,
             "network_transaction_id": response_data.get("processing", {}).get("acquirer_transaction_id")
         }
 
