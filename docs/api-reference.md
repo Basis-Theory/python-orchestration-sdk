@@ -63,7 +63,7 @@ await sdk.[provider].transaction({
         'xid': 'MDAwMDAwMDAwMDAwMDAwMDAwMDE=',                  
         'version': '2.2.0',               
     },
-    'overrideProviderProperties': {
+    'override_provider_properties': {
         'additionalData": {
             'risdata.userStatus': 'PGWC-123-TEST'
         }
