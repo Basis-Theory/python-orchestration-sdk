@@ -83,6 +83,7 @@ await sdk.[provider].transaction({
 | three_ds | ThreeDS | No | None | 3DS authentication data |
 | merchant_initiated | bool | No | False | Whether the transaction is merchant-initiated |
 | override_provider_properties | Dict[str, Any] | No | None | Appends and replaces any pre-mapped provider properties in the provider request |
+| metadata | Dict[str, Any] | No | None | Metadata to be associated with the transaction |
 
 ### Response
 

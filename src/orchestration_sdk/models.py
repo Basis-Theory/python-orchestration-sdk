@@ -138,6 +138,7 @@ class TransactionRequest:
     statement_description: Optional[StatementDescription] = None
     three_ds: Optional[ThreeDS] = None
     override_provider_properties: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, str]] = None
 
 
 # Response Models
