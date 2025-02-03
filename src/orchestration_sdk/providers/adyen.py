@@ -392,7 +392,7 @@ class AdyenClient:
                 ),
                 refunded_transaction_id=response_data.get('paymentPspReference'),
                 full_provider_response=response_data,
-                created_at=datetime.now(timezone.utc).isoformat()
+                created_at=datetime.now(timezone.utc)
             )
 
         except requests.exceptions.HTTPError as e:

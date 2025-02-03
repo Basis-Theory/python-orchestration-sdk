@@ -102,18 +102,18 @@ try:
     response = await sdk.adyen.transaction(transaction_request)
 except Exception as e:
     # Error response will look like:
-    {
-        'error_codes': [{
+    ErrorResponse(
+        error_codes=[{
             'category': 'payment_method_error',
             'code': 'expired_card'
         }],
-        'provider_errors': ['Expired Card'],
-        'full_provider_response': {
+        provider_errors=['Expired Card'],
+        full_provider_response={
             'resultCode': 'Refused',
             'refusalReason': 'Expired Card',
             'refusalReasonCode': '6'
         }
-    }
+    )
 ```
 
 ## Best Practices

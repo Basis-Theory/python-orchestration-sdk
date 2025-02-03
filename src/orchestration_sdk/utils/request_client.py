@@ -29,7 +29,7 @@ class RequestClient:
         except:
             response_data = {"message": response.text or "Unknown error"}
 
-        provider_errors: List[Dict[str, str]] = []
+        provider_errors: List[str] = []
         proxy_error = response_data.get("proxy_error", {})
         errors = proxy_error.get("errors", {}) if isinstance(proxy_error, dict) else {}
         for key, value in errors.items():

@@ -29,46 +29,46 @@ sdk = PaymentOrchestrationSDK.init({
 Process a payment transaction through a provider, find all of the providers available in our [Providers](./providers/index.md) documentation. Each provider uses the same method signature, request model, and response model. Keep in mind - Each provider may have a unique combination of these fields to accomplish the same goal (e.g. Charging a card-on-file for a subscription vs a customer initiated transaction for two different providers).
 
 ```python
-await sdk.[provider].transaction({
-    'reference': 'merchant-reference-123', 
-    'type': RecurringType.UNSCHEDULED,    
-    'merchant_initiated': True,    
-    'amount': {
-        'value': 1000,                      
-        'currency': 'USD',                 
-    },       
-    'source': {
-        'type': 'basis_theory_token',      
-        'id': 'bt_123abc...',              
-        'store_with_provider': True,       
-        'holderName': 'John Doe',          
-    },
-    'customer': {
-        'reference': 'customer-123',       
-        'first_name': 'John',
-        'last_name': 'Doe',
-        'email': 'john.doe@example.com',
-        'address': {
-            'address_line1': '123 Main St',
-            'address_line2': 'Apt 4B',
-            'city': 'New York',
-            'state': 'NY',
-            'zip': '10001',
-            'country': 'US' 
-        },
-    },
-    'three_ds': {
-        'eci': '05',                       
-        'authentication_value': 'AAABCZIhcQAAAABZlyFxAAAAAAA=',  
-        'xid': 'MDAwMDAwMDAwMDAwMDAwMDAwMDE=',                  
-        'version': '2.2.0',               
-    },
-    'override_provider_properties': {
-        'additionalData": {
+await sdk.[provider].transaction(TransactionRequest(
+    reference='merchant-reference-123',
+    type=RecurringType.UNSCHEDULED,
+    merchant_initiated=True,
+    amount=Amount(
+        value=1000,
+        currency='USD'
+    ),
+    source=Source(
+        type=SourceType.BASIS_THEORY_TOKEN,
+        id='bt_123abc...',
+        store_with_provider=True,
+        holder_name='John Doe'
+    ),
+    customer=Customer(
+        reference='customer-123',
+        first_name='John', 
+        last_name='Doe',
+        email='john.doe@example.com',
+        address=Address(
+            address_line1='123 Main St',
+            address_line2='Apt 4B',
+            city='New York',
+            state='NY',
+            zip='10001',
+            country='US'
+        )
+    ),
+    three_ds=ThreeDS(
+        eci='05',
+        authentication_value='AAABCZIhcQAAAABZlyFxAAAAAAA=',
+        xid='MDAwMDAwMDAwMDAwMDAwMDAwMDE=',
+        version='2.2.0'
+    ),
+    override_provider_properties={
+        'additionalData': {
             'risdata.userStatus': 'PGWC-123-TEST'
         }
     }
-})
+))
 ```
 
 ### Request Parameters

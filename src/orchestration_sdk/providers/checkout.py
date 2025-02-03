@@ -293,7 +293,7 @@ class CheckoutClient:
             id=str(response_data.get("id")),
             reference=str(response_data.get("reference")),
             amount=Amount(
-                value=int(response_data.get("amount")),
+                value=int(str(response_data.get("amount"))),
                 currency=str(response_data.get("currency"))
             ),
             status=TransactionStatus(
@@ -308,7 +308,7 @@ class CheckoutClient:
                 ) if response_data.get("source", {}).get("id") else None
             ),
             full_provider_response=response_data,
-            created_at=datetime.fromisoformat(response_data["processed_on"].split(".")[0] + "+00:00") if response_data.get("processed_on") else None,
+            created_at=datetime.fromisoformat(response_data["processed_on"].split(".")[0] + "+00:00") if response_data.get("processed_on") else datetime.now(timezone.utc),
             network_transaction_id=str(response_data.get("processing", {}).get("acquirer_transaction_id"))
         )
 
@@ -426,7 +426,7 @@ class CheckoutClient:
                 amount=Amount(value=response_data.get('amount'), currency=response_data.get('currency')),
                 status=TransactionStatus(code=TransactionStatusCode.RECEIVED, provider_code=""),
                 full_provider_response=response_data,
-                created_at=datetime.now(timezone.utc).isoformat(),
+                created_at=datetime.now(timezone.utc),
                 refunded_transaction_id=refund_request.original_transaction_id
             )
 

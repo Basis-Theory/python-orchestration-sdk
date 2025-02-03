@@ -101,25 +101,25 @@ async def process_payment():
     token_intent_id = response.json()['id']
 
     # Create a transaction request
-    transaction_request = {
-        'reference': str(uuid.uuid4()),
-        'type': RecurringType.ONE_TIME,
-        'amount': {
-            'value': 1000,  # $10.00
-            'currency': 'USD'
-        },
-        'source': {
-            'type': 'basis_theory_token_intent',
-            'id': token_intent_id,
-            'store_with_provider': False
-        },
-        'customer': {
-            'reference': 'customer-123',
-            'first_name': 'John',
-            'last_name': 'Doe',
-            'email': 'john.doe@example.com'
-        }
-    }
+    transaction_request = TransactionRequest(
+        reference=str(uuid.uuid4()),
+        type=RecurringType.ONE_TIME,
+        amount=Amount(
+            value=1000,  # $10.00
+            currency='USD'
+        ),
+        source=Source(
+            type=SourceType.BASIS_THEORY_TOKEN_INTENT,
+            id=token_intent_id,
+            store_with_provider=False
+        ),
+        customer=Customer(
+            reference='customer-123',
+            first_name='John',
+            last_name='Doe',
+            email='john.doe@example.com'
+        )
+    )
 
     try:
         # Process the transaction with your chosen provider
