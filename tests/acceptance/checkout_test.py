@@ -89,9 +89,9 @@ async def create_bt_token_intent(card_number: str = "4242424242424242", cvc: str
 
 def get_sdk(processing_channel = os.getenv('CHECKOUT_PROCESSING_CHANNEL'), private_key = os.getenv('CHECKOUT_PRIVATE_KEY')):
     return PaymentOrchestrationSDK.init({
-        'isTest': True,
-        'btApiKey': os.getenv('BASISTHEORY_API_KEY'),
-        'providerConfig': {
+        'is_test': True,
+        'bt_api_key': os.getenv('BASISTHEORY_API_KEY'),
+        'provider_config': {
             'checkout': {
                 'private_key': private_key,
                 'processing_channel': processing_channel
@@ -159,20 +159,18 @@ async def test_storing_card_on_file():
     assert response.source is not None
     assert response.source.type in [SourceType.BASIS_THEORY_TOKEN]
     assert response.source.id is not None
-    print(f"Provisioned source: {response.source.provisioned}")
     assert response.source.provisioned is not None
     assert response.source.provisioned.id is not None
 
     # Validate network_transaction_id
     assert response.network_transaction_id is not None
     assert len(response.network_transaction_id) > 0
-    
+
     # Validate other fields
     assert response.full_provider_response is not None
     
     assert response.created_at is not None
     # Optionally validate created_at is a valid datetime string
-    print(f"Created at: {response.created_at}")
     try:
         datetime.fromisoformat(response.created_at.replace('Z', '+00:00'))
     except ValueError:
@@ -946,5 +944,3 @@ async def test_run_checkout_verification():
     await run_transactions_for_list(us_processing_channel, us_transactions)
     await run_transactions_for_list(eu_processing_channel, eu_transactions)
 
-
-    

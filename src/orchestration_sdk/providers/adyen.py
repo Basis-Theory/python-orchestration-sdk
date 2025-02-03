@@ -1,7 +1,7 @@
 from typing import Dict, Any, Tuple, Optional, Union, cast
 from datetime import datetime, timezone
 import requests
-
+from deepmerge import always_merger
 from ..models import (
     TransactionRequest,
     Amount,
@@ -123,6 +123,9 @@ class AdyenClient:
             "storePaymentMethod": request.source.store_with_provider,
         }
 
+        if request.metadata:
+            payload["metadata"] = request.metadata
+
         # Add reference if provided
         if request.reference:
             payload["reference"] = request.reference
@@ -146,10 +149,12 @@ class AdyenClient:
                 "expiryMonth": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.expiration_month'}}}}",
                 "expiryYear": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.expiration_year'}}}}",
                 "cvc": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.cvc'}}}}"
-            })
-           
+            })      
         if request.source.holder_name:
                 payment_method["holderName"] = request.source.holder_name
+
+        if request.previous_network_transaction_id:
+            payment_method["networkPaymentReference"] = request. previous_network_transaction_id
 
         payload["paymentMethod"] = payment_method
 
@@ -218,11 +223,14 @@ class AdyenClient:
             if three_ds_data:
                 payload["additionalData"] = {"threeDSecure": three_ds_data}
 
+        # Override/merge any provider properties if specified
+        if request.override_provider_properties:
+            payload = always_merger.merge(payload, request.override_provider_properties)
+
         return payload
 
     def _transform_adyen_response(self, response_data: Dict[str, Any], request: TransactionRequest) -> TransactionResponse:
         """Transform Adyen response to our standardized format."""
-
         transaction_response = TransactionResponse(
             id=response_data.get("pspReference"),
             reference=response_data.get("merchantReference"),

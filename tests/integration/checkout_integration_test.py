@@ -71,9 +71,9 @@ async def test_errors():
 
     # Initialize the SDK
     sdk = PaymentOrchestrationSDK.init({
-        'isTest': True,
-        'btApiKey': 'test_bt_api_key',
-        'providerConfig': {
+        'is_test': True,
+        'bt_api_key': 'test_bt_api_key',
+        'provider_config': {
             'checkout': {
                 'private_key': 'test_private_key',
                 'processing_channel': 'test_channel',

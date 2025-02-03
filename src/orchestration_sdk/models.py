@@ -147,6 +147,9 @@ class TransactionRequest:
     customer: Optional[Customer] = None
     statement_description: Optional[StatementDescription] = None
     three_ds: Optional[ThreeDS] = None
+    previous_network_transaction_id: Optional[str] = None
+    override_provider_properties: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, str]] = None
 
 @dataclass
 class RefundRequest:

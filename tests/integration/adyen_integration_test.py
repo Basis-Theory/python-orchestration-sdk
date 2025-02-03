@@ -70,12 +70,12 @@ async def test_errors():
 
     # Initialize the SDK
     sdk = PaymentOrchestrationSDK.init({
-        'isTest': True,
-        'btApiKey': 'test_bt_api_key',
-        'providerConfig': {
+        'is_test': True,
+        'bt_api_key': 'test_bt_api_key',
+        'provider_config': {
             'adyen': {
-                'apiKey': 'test_adyen_api_key',
-                'merchantAccount': 'test_merchant',
+                'api_key': 'test_adyen_api_key',
+                'merchant_account': 'test_merchant',
             }
         }
     })

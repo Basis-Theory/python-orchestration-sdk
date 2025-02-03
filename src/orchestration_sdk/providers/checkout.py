@@ -1,5 +1,6 @@
 from typing import Dict, Any, Tuple, Optional, Union, cast
 from datetime import datetime, timezone
+from deepmerge import always_merger
 import requests
 import os
 import json
@@ -193,9 +194,14 @@ class CheckoutClient:
             "reference": request.reference
         }
 
+        if request.metadata:
+            payload["metadata"] = request.metadata
+
         if request.type:
             payload["payment_type"] = RECURRING_TYPE_MAPPING.get(request.type)
 
+        if request. previous_network_transaction_id:
+            payload["previous_payment_id"] = request. previous_network_transaction_id
         # Process source based on type
         if request.source.type == SourceType.PROCESSOR_TOKEN:
             payload["source"] = {
@@ -272,6 +278,12 @@ class CheckoutClient:
             if request.three_ds.version:
                 three_ds_data["version"] = request.three_ds.version
             payload["3ds"] = three_ds_data
+
+        # Override/merge any provider properties if specified
+        if request.override_provider_properties:
+            payload = always_merger.merge(payload, request.override_provider_properties)
+
+        print(f"Payload: {json.dumps(payload, indent=2)}")
 
         return payload
 

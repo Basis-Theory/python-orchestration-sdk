@@ -28,12 +28,12 @@ load_dotenv()
 async def test_error_invalid_api_key():
     # Initialize the SDK with environment variables
     sdk = PaymentOrchestrationSDK.init({
-        'isTest': True,
-        'btApiKey': "invalid",
-        'providerConfig': {
+        'is_test': True,
+        'bt_api_key': "invalid",
+        'provider_config': {
             'adyen': {
-                'apiKey': "invalid",
-                'merchantAccount': "nope",
+                'api_key': "invalid",
+                'merchant_account': "nope",
             }
         }
     })
@@ -56,6 +56,7 @@ async def test_error_invalid_api_key():
             reference=str(uuid.uuid4()),
         )
     )
+
 
     print(f"Transaction request: {transaction_request}")
 
