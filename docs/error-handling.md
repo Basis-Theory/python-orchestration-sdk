@@ -4,26 +4,34 @@ The Payment Orchestration SDK provides comprehensive error handling with standar
 
 ## Error Response Structure
 
-When a transaction fails, the SDK returns an error response with the following structure:
+When a transaction fails, the SDK raises an exception with the following structure:
 
 ```python
-{
-    'error_codes': [
-        {
+    ErrorResponse(
+        error_codes=[{
             'category': 'payment_method_error',
             'code': 'expired_card'
+        }],
+        provider_errors=['Expired Card'],
+        full_provider_response={
+            'resultCode': 'Refused',
+            'refusalReason': 'Expired Card',
+            'refusalReasonCode': '6'
         }
-    ],
-    'provider_errors': [
-        'Expired Card'
-    ],
-    'full_provider_response': {
-        # Raw provider response
-    }
-}
+    )
 ```
 
-### ErrorResponse
+### Exceptions
+
+| Exception | Has ErrorResponse | Description |
+|-----------|------------------|-------------|
+| `TransactionError` | Yes | Raised when a payment transaction fails. Contains the standardized error response with error codes and provider details. |
+| `ValidationError` | No | Raised when request validation fails, such as missing required fields. |
+| `ConfigurationError` | No | Raised when SDK configuration is invalid, such as missing API keys or invalid settings. |
+| `BasisTheoryError` | Yes | Raised when there is an error interacting with Basis Theory services. Contains error response and HTTP status. |
+
+
+### Exception.ErrorResponse
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -101,19 +109,19 @@ The SDK includes the following error types:
 try:
     response = await sdk.adyen.transaction(transaction_request)
 except Exception as e:
-    # Error response will look like:
-    ErrorResponse(
-        error_codes=[{
-            'category': 'payment_method_error',
-            'code': 'expired_card'
-        }],
-        provider_errors=['Expired Card'],
-        full_provider_response={
-            'resultCode': 'Refused',
-            'refusalReason': 'Expired Card',
-            'refusalReasonCode': '6'
-        }
-    )
+    # Exception will have e.error_response
+    # ErrorResponse(
+    #     error_codes=[{
+    #         'category': 'payment_method_error',
+    #         'code': 'expired_card'
+    #     }],
+    #     provider_errors=['Expired Card'],
+    #     full_provider_response={
+    #         'resultCode': 'Refused',
+    #         'refusalReason': 'Expired Card',
+    #         'refusalReasonCode': '6'
+    #     }
+    # )
 ```
 
 ## Best Practices
