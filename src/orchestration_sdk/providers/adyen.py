@@ -17,7 +17,9 @@ from ..models import (
     ErrorCategory,
     RefundRequest,
     RefundResponse,
-    TransactionStatus
+    TransactionStatus,
+    ErrorResponse,
+    ErrorCode
 )
 from ..utils.model_utils import create_transaction_request, validate_required_fields
 from ..utils.request_client import RequestClient
@@ -244,7 +246,7 @@ class AdyenClient:
             "created_at": datetime.now(timezone.utc).isoformat()
         }
 
-    def _transform_error_response(self, response: requests.Response, response_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _transform_error_response(self, response: requests.Response, response_data: Dict[str, Any]) -> ErrorResponse:
         """Transform error responses to our standardized format.
         
         Args:
@@ -266,16 +268,17 @@ class AdyenClient:
         else:
             error_type = ErrorType.OTHER
 
-        return {
-            "error_codes": [
-                {
-                    "category": error_type.category,
-                    "code": error_type.code
-                }
+        return ErrorResponse(
+            error_codes=[
+                ErrorCode(
+                    category=error_type.category,
+                    code=error_type.code
+                )
             ],
-            "provider_errors": [response_data.get("refusalReason") or response_data.get("message", "")],
-            "full_provider_response": response_data
-        }
+            provider_errors=[response_data.get("refusalReason") or response_data.get("message", "")],
+            full_provider_response=response_data
+        )
+
 
     async def transaction(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process a payment transaction through Adyen's API directly or via Basis Theory's proxy."""
@@ -302,21 +305,24 @@ class AdyenClient:
                 data=payload,
                 use_bt_proxy=request.source.type != SourceType.PROCESSOR_TOKEN
             )
+
+            response_data = response.json()
+
+            # Check if it's an error response (non-200 status code or Adyen error)
+            if not response.ok or response_data.get("resultCode") in ["Refused", "Error", "Cancelled"]:
+                raise TransactionException(self._transform_error_response(response, response_data))
+
+            # Transform the successful response to our format
+            return self._transform_adyen_response(response_data, request)
+
         except requests.exceptions.HTTPError as e:
-            # Check if this is a BT error
-            if hasattr(e, 'bt_error_response'):
-                return e.bt_error_response
-            # Handle HTTP errors (like 401, 403, etc.)
-            return self._transform_error_response(e.response, e.response.json())
+            try:
+                error_data = e.response.json()
+            except:
+                error_data = None
 
-        response_data = response.json()
+            raise TransactionException(self._transform_error_response(e.response, error_data))
 
-        # Check if it's an error response (non-200 status code or Adyen error)
-        if not response.ok or response_data.get("resultCode") in ["Refused", "Error", "Cancelled"]:
-            return self._transform_error_response(response, response_data)
-
-        # Transform the successful response to our format
-        return self._transform_adyen_response(response_data, request)
 
     async def refund_transaction(self, refund_request: RefundRequest) -> RefundResponse:
         """

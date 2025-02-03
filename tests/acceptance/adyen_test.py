@@ -17,7 +17,7 @@ from orchestration_sdk.models import (
     ErrorType,
     Amount
 )
-from orchestration_sdk.exceptions import TransactionException, ValidationError
+from orchestration_sdk.exceptions import TransactionException, ValidationError, BasisTheoryError
 
 # Load environment variables from .env file
 load_dotenv()
@@ -340,34 +340,33 @@ async def test_error_expired_card():
     }
 
     print(f"Transaction request: {transaction_request}")
-
-    # Make the transaction request
-    response = await sdk.adyen.transaction(transaction_request)
-    print(f"Response: {response}")
+    # Make the transaction request and catch TransactionException
+    try:
+        response = await sdk.adyen.transaction(transaction_request)
+        print(f"Response: {response}")
+    except TransactionException as e:
+        response = e.error_response
+        print(f"Error Response: {response}")
 
     # Validate error response structure
-    assert isinstance(response, dict)
-    assert 'error_codes' in response
-    assert isinstance(response['error_codes'], list)
-    assert len(response['error_codes']) == 1
+    assert isinstance(response.error_codes, list)
+    assert len(response.error_codes) == 1
     
     # Verify exact error code values
-    error = response['error_codes'][0]
-    assert error['category'] == ErrorCategory.PAYMENT_METHOD_ERROR
-    assert error['code'] == ErrorType.EXPIRED_CARD.code
+    error = response.error_codes[0]
+    assert error.category == ErrorCategory.PAYMENT_METHOD_ERROR
+    assert error.code == ErrorType.EXPIRED_CARD.code
     
     # Verify provider errors
-    assert 'provider_errors' in response
-    assert isinstance(response['provider_errors'], list)
-    assert len(response['provider_errors']) == 1
-    assert response['provider_errors'][0] == 'Expired Card'
+    assert isinstance(response.provider_errors, list)
+    assert len(response.provider_errors) == 1
+    assert response.provider_errors[0] == 'Expired Card'
     
     # Verify full provider response
-    assert 'full_provider_response' in response
-    assert isinstance(response['full_provider_response'], dict)
-    assert response['full_provider_response']['resultCode'] == 'Refused'
-    assert response['full_provider_response']['refusalReason'] == 'Expired Card'
-    assert response['full_provider_response']['refusalReasonCode'] == '6'
+    assert isinstance(response.full_provider_response, dict)
+    assert response.full_provider_response['resultCode'] == 'Refused'
+    assert response.full_provider_response['refusalReason'] == 'Expired Card'
+    assert response.full_provider_response['refusalReasonCode'] == '6'
 
 @pytest.mark.asyncio
 async def test_error_invalid_api_key():
@@ -397,35 +396,32 @@ async def test_error_invalid_api_key():
     }
 
     print(f"Transaction request: {transaction_request}")
-
-    # Make the transaction request
-    response = await sdk.adyen.transaction(transaction_request)
-    print(f"Response: {response}")
+    # Make the transaction request and catch BasisTheoryException
+    try:
+        response = await sdk.adyen.transaction(transaction_request)
+        print(f"Response: {response}")
+    except TransactionException as e:
+        response = e.error_response
+        print(f"BasisTheory Error Response: {response}")
 
     # Validate error response structure
-    assert isinstance(response, dict)
-    assert 'error_codes' in response
-    assert isinstance(response['error_codes'], list)
-    assert len(response['error_codes']) == 1
+    assert isinstance(response.error_codes, list)
+    assert len(response.error_codes) == 1
     
     # Verify exact error code values
-    error = response['error_codes'][0]
-    assert error['category'] == ErrorCategory.OTHER
-    assert error['code'] == ErrorType.INVALID_API_KEY.code
+    error = response.error_codes[0]
+    assert error.category == ErrorCategory.OTHER
+    assert error.code == ErrorType.INVALID_API_KEY.code
     
     # Verify provider errors
-    assert 'provider_errors' in response
-    assert isinstance(response['provider_errors'], list)
-    assert len(response['provider_errors']) == 1
-    assert response['provider_errors'][0] == 'HTTP Status Response - Unauthorized'
+    assert len(response.provider_errors) == 1
+    assert response.provider_errors[0] == 'HTTP Status Response - Unauthorized'
     
     # Verify full provider response
-    assert 'full_provider_response' in response
-    assert isinstance(response['full_provider_response'], dict)
-    assert response['full_provider_response']['status'] == 401
-    assert response['full_provider_response']['errorCode'] == '000'
-    assert response['full_provider_response']['errorType'] == 'security'
-    assert response['full_provider_response']['message'] == 'HTTP Status Response - Unauthorized'
+    assert response.full_provider_response['status'] == 401
+    assert response.full_provider_response['errorCode'] == '000'
+    assert response.full_provider_response['errorType'] == 'security'
+    assert response.full_provider_response['message'] == 'HTTP Status Response - Unauthorized'
 
 @pytest.mark.asyncio
 async def test_token_intents_charge_not_storing_card_on_file(): 

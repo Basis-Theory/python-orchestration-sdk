@@ -84,10 +84,8 @@ class RequestClient:
         # Check for BT errors first
         if use_bt_proxy and not response.ok and self._is_bt_error(response):
             error_response = self._transform_bt_error(response)
-            # Raise an HTTPError with the transformed error response
-            error = requests.exceptions.HTTPError(response=response)
-            setattr(error, 'bt_error_response', error_response)
-            raise error
+ 
+            raise BasisTheoryError(error_response)
 
         # Raise for other HTTP errors
         response.raise_for_status()
