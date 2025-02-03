@@ -119,7 +119,7 @@ async def test_storing_card_on_file():
             type=SourceType.BASIS_THEORY_TOKEN,
             id=token_id,
             store_with_provider=True,
-            holderName='John Doe'
+            holder_name='John Doe'
         ),
         customer=Customer(
             reference=str(uuid.uuid4()),
@@ -163,9 +163,9 @@ async def test_storing_card_on_file():
     assert response.source.provisioned is not None
     assert response.source.provisioned.id is not None
 
-    # Validate networkTransactionId
-    assert response.networkTransactionId is not None
-    assert len(response.networkTransactionId) > 0
+    # Validate network_transaction_id
+    assert response.network_transaction_id is not None
+    assert len(response.network_transaction_id) > 0
     
     # Validate other fields
     assert response.full_provider_response is not None
@@ -232,9 +232,9 @@ async def test_not_storing_card_on_file():
     # Validate other fields
     assert response.full_provider_response is not None
 
-    # Validate networkTransactionId
-    assert response.networkTransactionId is not None
-    assert len(response.networkTransactionId) > 0
+    # Validate network_transaction_id
+    assert response.network_transaction_id is not None
+    assert len(response.network_transaction_id) > 0
 
 @pytest.mark.asyncio
 async def test_with_three_ds():
@@ -303,10 +303,10 @@ async def test_with_three_ds():
     # Validate other fields
     assert response.full_provider_response is not None
 
-    # Validate networkTransactionId
-    assert response.networkTransactionId is not None
-    assert isinstance(response.networkTransactionId, str)
-    assert len(response.networkTransactionId) > 0
+    # Validate network_transaction_id
+    assert response.network_transaction_id is not None
+    assert isinstance(response.network_transaction_id, str)
+    assert len(response.network_transaction_id) > 0
 
 @pytest.mark.asyncio
 async def test_error_expired_card():
@@ -388,7 +388,7 @@ async def test_error_invalid_api_key():
             type=SourceType.BASIS_THEORY_TOKEN,
             id=token_id,
             store_with_provider=False,
-            holderName='CARD_EXPIRED'
+            holder_name='CARD_EXPIRED'
         ),
         customer=Customer(
             reference=str(uuid.uuid4())
@@ -474,9 +474,9 @@ async def test_token_intents_charge_not_storing_card_on_file():
     # Validate other fields
     assert response.full_provider_response is not None
 
-    # Validate networkTransactionId
-    assert response.networkTransactionId is not None
-    assert len(response.networkTransactionId) > 0
+    # Validate network_transaction_id
+    assert response.network_transaction_id is not None
+    assert len(response.network_transaction_id) > 0
 
 @pytest.mark.asyncio
 async def test_processor_token_charge_not_storing_card_on_file(): 
@@ -495,7 +495,7 @@ async def test_processor_token_charge_not_storing_card_on_file():
             type=SourceType.BASIS_THEORY_TOKEN_INTENT,
             id=token_intent_id,
             store_with_provider=True,
-            holderName='John Doe'
+            holder_name='John Doe'
         ),
         customer=Customer(
             reference=str(uuid.uuid4()),
@@ -561,10 +561,10 @@ async def test_processor_token_charge_not_storing_card_on_file():
     # Validate other fields
     assert response.full_provider_response is not None
 
-    # Validate networkTransactionId
-    assert response.networkTransactionId is not None
-    assert isinstance(response.networkTransactionId, str)
-    assert len(response.networkTransactionId) > 0
+    # Validate network_transaction_id
+    assert response.network_transaction_id is not None
+    assert isinstance(response.network_transaction_id, str)
+    assert len(response.network_transaction_id) > 0
 
 
 @pytest.mark.asyncio
@@ -725,7 +725,7 @@ async def run_transactions_for_list(channel, transactions):
                 'type': 'basis_theory_token_intent',
                 'id': token_id,
                 'store_with_provider': False,
-                'holderName': f"{tx_data['first_name']} {tx_data['last_name']}"
+                'holder_name': f"{tx_data['first_name']} {tx_data['last_name']}"
             },
             'customer': {
                 'reference': str(uuid.uuid4()),

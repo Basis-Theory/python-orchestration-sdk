@@ -297,7 +297,7 @@ class CheckoutClient:
             ),
             full_provider_response=response_data,
             created_at=datetime.fromisoformat(response_data["processed_on"].split(".")[0] + "+00:00").isoformat("T", "milliseconds") if response_data.get("processed_on") else None,
-            networkTransactionId=response_data.get("processing", {}).get("acquirer_transaction_id")
+            network_transaction_id=response_data.get("processing", {}).get("acquirer_transaction_id")
         )
 
     def _get_error_code(self, error: ErrorType) -> Dict[str, Any]:

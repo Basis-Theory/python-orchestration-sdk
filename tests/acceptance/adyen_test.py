@@ -106,7 +106,7 @@ async def test_storing_card_on_file():
             type=SourceType.BASIS_THEORY_TOKEN,
             id=token_id,
             store_with_provider=True,
-            holderName='John Doe'
+            holder_name='John Doe'
         ),
         customer=Customer(
             reference=str(uuid.uuid4()),
@@ -165,10 +165,10 @@ async def test_storing_card_on_file():
     except ValueError:
         pytest.fail("created_at is not a valid ISO datetime string")
 
-    # Validate networkTransactionId
-    assert response.networkTransactionId is not None
-    assert isinstance(response.networkTransactionId, str)
-    assert len(response.networkTransactionId) > 0
+    # Validate network_transaction_id
+    assert response.network_transaction_id is not None
+    assert isinstance(response.network_transaction_id, str)
+    assert len(response.network_transaction_id) > 0
 
 @pytest.mark.asyncio
 async def test_not_storing_card_on_file():
@@ -225,10 +225,10 @@ async def test_not_storing_card_on_file():
     assert response.full_provider_response is not None
     assert isinstance(response.full_provider_response, dict)
 
-    # Validate networkTransactionId
-    assert response.networkTransactionId is not None
-    assert isinstance(response.networkTransactionId, str)
-    assert len(response.networkTransactionId) > 0
+    # Validate network_transaction_id
+    assert response.network_transaction_id is not None
+    assert isinstance(response.network_transaction_id, str)
+    assert len(response.network_transaction_id) > 0
 
 @pytest.mark.asyncio
 async def test_with_three_ds():
@@ -290,9 +290,9 @@ async def test_with_three_ds():
     # Validate other fields
     assert response.full_provider_response is not None
 
-    # Validate networkTransactionId
-    assert response.networkTransactionId is not None
-    assert len(response.networkTransactionId) > 0
+    # Validate network_transaction_id
+    assert response.network_transaction_id is not None
+    assert len(response.network_transaction_id) > 0
 
 @pytest.mark.asyncio
 async def test_error_expired_card():
@@ -313,7 +313,7 @@ async def test_error_expired_card():
             type=SourceType.BASIS_THEORY_TOKEN,
             id=token_id,
             store_with_provider=False,
-            holderName='CARD_EXPIRED'
+            holder_name='CARD_EXPIRED'
         ),
         customer=Customer(
             reference=str(uuid.uuid4())
@@ -366,7 +366,7 @@ async def test_error_invalid_api_key():
             type=SourceType.BASIS_THEORY_TOKEN,
             id=token_id,
             store_with_provider=False,
-            holderName='CARD_EXPIRED'
+            holder_name='CARD_EXPIRED'
         ),
         customer=Customer(reference=str(uuid.uuid4()))
     )
@@ -444,10 +444,10 @@ async def test_token_intents_charge_not_storing_card_on_file():
     assert response.full_provider_response is not None
     assert isinstance(response.full_provider_response, dict)
 
-    # Validate networkTransactionId
-    assert response.networkTransactionId is not None
-    assert isinstance(response.networkTransactionId, str)
-    assert len(response.networkTransactionId) > 0
+    # Validate network_transaction_id
+    assert response.network_transaction_id is not None
+    assert isinstance(response.network_transaction_id, str)
+    assert len(response.network_transaction_id) > 0
 
 @pytest.mark.asyncio
 async def test_processor_token_charge_not_storing_card_on_file(): 
@@ -495,10 +495,10 @@ async def test_processor_token_charge_not_storing_card_on_file():
     assert response.full_provider_response is not None
     assert isinstance(response.full_provider_response, dict)
 
-    # Validate networkTransactionId
-    assert response.networkTransactionId is not None
-    assert isinstance(response.networkTransactionId, str)
-    assert len(response.networkTransactionId) > 0
+    # Validate network_transaction_id
+    assert response.network_transaction_id is not None
+    assert isinstance(response.network_transaction_id, str)
+    assert len(response.network_transaction_id) > 0
 
 @pytest.mark.asyncio
 async def test_partial_refund():

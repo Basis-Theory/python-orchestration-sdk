@@ -138,8 +138,6 @@ class AdyenClient:
         
         if request.source.type == SourceType.PROCESSOR_TOKEN:
             payment_method["storedPaymentMethodId"] = request.source.id
-            if request.source.holderName:
-                payment_method["holderName"] = request.source.holderName
         elif request.source.type in [SourceType.BASIS_THEORY_TOKEN, SourceType.BASIS_THEORY_TOKEN_INTENT]:
             # Add card data with Basis Theory expressions
             token_prefix = "token_intent" if request.source.type == SourceType.BASIS_THEORY_TOKEN_INTENT else "token"
@@ -149,8 +147,9 @@ class AdyenClient:
                 "expiryYear": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.expiration_year'}}}}",
                 "cvc": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.cvc'}}}}"
             })
-            if request.source.holderName:
-                payment_method["holderName"] = request.source.holderName
+           
+        if request.source.holder_name:
+                payment_method["holderName"] = request.source.holder_name
 
         payload["paymentMethod"] = payment_method
 
@@ -239,7 +238,7 @@ class AdyenClient:
                 type=request.source.type,
                 id=request.source.id,
             ),
-            networkTransactionId=response_data.get("additionalData", {}).get("networkTxReference"),
+            network_transaction_id=response_data.get("additionalData", {}).get("networkTxReference"),
             full_provider_response=response_data,
             created_at=datetime.now(timezone.utc).isoformat()
         )

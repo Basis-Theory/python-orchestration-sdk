@@ -10,7 +10,11 @@ from orchestration_sdk.models import (
     RecurringType,
     SourceType,
     ErrorCategory,
-    ErrorType
+    ErrorType,
+    TransactionRequest,
+    Amount,
+    Source,
+    Customer
 )
 from orchestration_sdk.exceptions import TransactionException, ValidationError
 
@@ -96,22 +100,22 @@ async def test_errors():
         mock_error.response = mock_response
 
         # Create a test transaction request
-        transaction_request = {
-            'reference': str(uuid.uuid4()),
-            'type': RecurringType.ONE_TIME,
-            'amount': {
-                'value': 1,
-                'currency': 'USD'
-            },
-            'source': {
-                'type': SourceType.PROCESSOR_TOKEN,
-                'id': 'test_token_id',
-                'store_with_provider': False
-            },
-            'customer': {
-                'reference': str(uuid.uuid4())
-            }
-        }
+        transaction_request = TransactionRequest(
+            reference=str(uuid.uuid4()),
+            type=RecurringType.ONE_TIME,
+            amount=Amount(
+                value=1,
+                currency='USD'
+            ),
+            source=Source(
+                type=SourceType.PROCESSOR_TOKEN,
+                id='test_token_id',
+                store_with_provider=False
+            ),
+            customer=Customer(
+                reference=str(uuid.uuid4())
+            )
+        )
 
         # Mock the session.request method to raise HTTPError
         with patch('requests.request', side_effect=mock_error) as mock_request:
