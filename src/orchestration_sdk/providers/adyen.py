@@ -14,11 +14,14 @@ from ..models import (
     RecurringType,
     TransactionStatusCode,
     ErrorType,
-    ErrorCategory
+    ErrorCategory,
+    RefundRequest,
+    RefundResponse,
+    TransactionStatus
 )
-from ..exceptions import ValidationError, ProcessingError
 from ..utils.model_utils import create_transaction_request, validate_required_fields
 from ..utils.request_client import RequestClient
+from ..exceptions import TransactionException
 
 
 RECURRING_TYPE_MAPPING = {
@@ -314,3 +317,71 @@ class AdyenClient:
 
         # Transform the successful response to our format
         return self._transform_adyen_response(response_data, request)
+
+    async def refund_transaction(self, refund_request: RefundRequest) -> RefundResponse:
+        """
+        Refund a payment transaction through Adyen's API.
+        
+        Args:
+            refund_request (RefundRequest): The refund request details
+            
+        Returns:
+            RefundResponse: The refund response
+        """
+        # Set up headers
+        headers = {
+            "X-API-Key": self.api_key,
+            "Content-Type": "application/json"
+        }
+
+        # Prepare the refund payload
+        payload = {
+            "merchantAccount": self.merchant_account,
+            "reference": refund_request.reference,
+            "amount": {
+                "value": refund_request.amount.value,
+                "currency": refund_request.amount.currency
+            }
+        }
+
+        # Add refund reason if provided
+        if refund_request.reason:
+            payload["merchantRefundReason"] = refund_request.reason
+
+        try:
+            # Make request to Adyen
+            response = self.request_client.request(
+                url=f"{self.base_url}/payments/{refund_request.original_transaction_id}/refunds",
+                method="POST",
+                headers=headers,
+                data=payload,
+                use_bt_proxy=False  # Refunds don't need BT proxy
+            )
+
+            response_data = response.json()
+            
+            # Transform the response to a standardized format
+            return RefundResponse(
+                id=response_data.get('pspReference'),
+                reference=response_data.get('reference'),
+                amount=Amount(
+                    value=response_data.get('amount', {}).get('value'),
+                    currency=response_data.get('amount', {}).get('currency')
+                ),
+                status=TransactionStatus(
+                    code=TransactionStatusCode.RECEIVED,
+                    provider_code=response_data.get('status')
+                ),
+                refunded_transaction_id=response_data.get('paymentPspReference'),
+                full_provider_response=response_data,
+                created_at=datetime.now(timezone.utc).isoformat()
+            )
+
+        except requests.exceptions.HTTPError as e:
+            try:
+                error_data = e.response.json()
+            except:
+                error_data = None
+
+            raise TransactionException(self._transform_error_response(e.response, error_data))
+

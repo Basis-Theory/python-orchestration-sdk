@@ -9,14 +9,15 @@ from basistheory.configuration import Configuration # type: ignore
 from basistheory.api.tokens_api import TokensApi # type: ignore
 from orchestration_sdk import PaymentOrchestrationSDK
 from orchestration_sdk.models import (
-    TransactionResponse,
-    TransactionStatus,
-    TransactionSource,
     TransactionStatusCode,
     RecurringType,
+    RefundRequest,
+    RefundResponse,
     ErrorCategory,
-    ErrorType
+    ErrorType,
+    Amount
 )
+from orchestration_sdk.exceptions import TransactionException, ValidationError
 
 # Load environment variables from .env file
 load_dotenv()
@@ -559,3 +560,50 @@ async def test_processor_token_charge_not_storing_card_on_file():
     assert 'networkTransactionId' in response
     assert isinstance(response['networkTransactionId'], str)
     assert len(response['networkTransactionId']) > 0
+
+@pytest.mark.asyncio
+async def test_partial_refund():
+   # Create a Basis Theory token
+    token_intent_id = await create_bt_token_intent()
+
+    # Initialize the SDK with environment variables
+    sdk = get_sdk();
+
+    # Create a test transaction with a processor token
+    transaction_request = {
+        'reference': str(uuid.uuid4()),  # Unique reference for the transaction
+        'type': RecurringType.ONE_TIME,
+        'amount': {
+            'value': 1000,  # Amount in cents (10.00 in this case)
+            'currency': 'USD'
+        },
+        'source': {
+            'type': 'basis_theory_token_intent',
+            'id': token_intent_id,
+            'store_with_provider': False
+        },
+        'customer': {
+            'reference': str(uuid.uuid4()),
+        }
+    }
+
+    # Make the transaction request
+    response = await sdk.adyen.transaction(transaction_request)
+    
+    refund_request = RefundRequest(
+        original_transaction_id=response['id'],
+        reference=f"{transaction_request.get('reference')}_refund",
+        amount=Amount(value=500, currency='USD')
+    )
+
+    # Process the refund
+    refund_response = await sdk.adyen.refund_transaction(refund_request)
+
+    # Verify refund succeeded
+    assert refund_response.reference == refund_request.reference
+    assert refund_response.id != refund_request.original_transaction_id
+    assert refund_response.refunded_transaction_id == refund_request.original_transaction_id
+    assert refund_response.amount.value == refund_request.amount.value
+    assert refund_response.amount.currency == refund_request.amount.currency
+    assert refund_response.status.code == TransactionStatusCode.RECEIVED
+    assert refund_response.status.provider_code == "received"

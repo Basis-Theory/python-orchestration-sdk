@@ -9,10 +9,9 @@ from orchestration_sdk.models import (
     TransactionStatusCode,
     RecurringType,
     SourceType,
-    ErrorCategory,
     ErrorType
 )
-
+from orchestration_sdk.exceptions import TransactionException
 @pytest.mark.asyncio
 async def test_successful_transaction():
     # Mock response data that matches Adyen's format

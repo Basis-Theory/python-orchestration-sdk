@@ -10,9 +10,9 @@ from orchestration_sdk.models import (
     RecurringType,
     SourceType,
     ErrorCategory,
-    ErrorType,
-    TransactionException
+    ErrorType
 )
+from orchestration_sdk.exceptions import TransactionException, ValidationError
 
 @pytest.mark.asyncio
 async def test_errors():

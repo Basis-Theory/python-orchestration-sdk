@@ -16,13 +16,13 @@ from orchestration_sdk.models import (
     TransactionSource,
     TransactionStatusCode,
     RecurringType,
+    RefundResponse,
+    RefundRequest,
     ErrorCategory,
     ErrorType,
-    RefundRequest,
-    RefundResponse,
-    Amount,
-    TransactionException
+    Amount
 )
+from orchestration_sdk.exceptions import TransactionException, ValidationError
 
 # Load environment variables from .env file
 load_dotenv()
@@ -637,7 +637,7 @@ async def test_partial_refund():
 
     # Verify refund succeeded
     assert refund_response.reference == refund_request.reference
-    assert refund_response.status.code == TransactionStatusCode.REFUNDED
+    assert refund_response.status.code == TransactionStatusCode.RECEIVED
 
 @pytest.mark.asyncio
 async def test_failed_refund():

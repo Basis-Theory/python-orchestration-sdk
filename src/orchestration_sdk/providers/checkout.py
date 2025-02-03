@@ -22,10 +22,9 @@ from ..models import (
     RefundResponse,
     TransactionStatus,
     ErrorResponse,
-    TransactionException,
     ErrorCode
 )
-from ..exceptions import ValidationError, ProcessingError
+from orchestration_sdk.exceptions import TransactionException
 from ..utils.model_utils import create_transaction_request, validate_required_fields
 from ..utils.request_client import RequestClient
 
@@ -421,10 +420,6 @@ class CheckoutClient:
             "currency": refund_request.amount.currency
         }
 
-        # Add metadata if provided
-        if refund_request.metadata:
-            payload['metadata'] = refund_request.metadata
-
         try:
             # Make request to Checkout.com
             response = self.request_client.request(
@@ -442,9 +437,10 @@ class CheckoutClient:
                 id=response_data.get('action_id'),
                 reference=response_data.get('reference'),
                 amount=Amount(value=response_data.get('amount'), currency=response_data.get('currency')),
-                status=TransactionStatus(code=TransactionStatusCode.REFUNDED, provider_code=""),
+                status=TransactionStatus(code=TransactionStatusCode.RECEIVED, provider_code=""),
                 full_provider_response=response_data,
-                created_at=datetime.now(timezone.utc).isoformat()
+                created_at=datetime.now(timezone.utc).isoformat(),
+                refunded_transaction_id=refund_request.original_transaction_id
             )
 
         except requests.exceptions.HTTPError as e:

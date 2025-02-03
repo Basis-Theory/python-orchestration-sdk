@@ -22,6 +22,13 @@ class RecurringType(str, Enum):
     SUBSCRIPTION = "SUBSCRIPTION"
     UNSCHEDULED = "UNSCHEDULED"
 
+class RefundReason(str, Enum):
+    FRAUD = "FRAUD"
+    CUSTOMER_REQUEST = "CUSTOMER_REQUEST"
+    RETURN = "RETURN"
+    DUPLICATE = "DUPLICATE"
+    OTHER = "OTHER"
+
 
 class SourceType(str, Enum):
     BASIS_THEORY_TOKEN = "basis_theory_token"
@@ -39,7 +46,7 @@ class ErrorCategory(str, Enum):
     OTHER = "Other"
 
 
-class ErrorType(Enum):
+class ErrorType(Enum):  
     """Enum for error types."""
     REFUSED = ("refused", ErrorCategory.PROCESSING_ERROR)
     REFERRAL = ("referral", ErrorCategory.PROCESSING_ERROR)
@@ -146,7 +153,7 @@ class RefundRequest:
     original_transaction_id: str
     reference: str
     amount: Amount
-    metadata: Optional[Dict[str, Any]] = None
+    reason: Optional[RefundReason] = None
 
 # Response Models
 @dataclass
@@ -186,7 +193,7 @@ class RefundResponse:
     status: TransactionStatus
     full_provider_response: Dict[str, Any]
     created_at: datetime
-
+    refunded_transaction_id: Optional[str] = None
 
 @dataclass
 class ErrorCode:
@@ -198,11 +205,3 @@ class ErrorResponse:
     error_codes: List[ErrorCode]
     provider_errors: List[str]
     full_provider_response: Dict[str, Any]
-
-
-class TransactionException(Exception):
-    error_response: ErrorResponse
-    def __init__(self, error_response: 'ErrorResponse'):
-        self.error_response = error_response
-        super().__init__(str(error_response.error_codes))
-
