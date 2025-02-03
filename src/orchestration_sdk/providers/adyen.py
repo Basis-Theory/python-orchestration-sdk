@@ -19,7 +19,10 @@ from ..models import (
     RefundResponse,
     TransactionStatus,
     ErrorResponse,
-    ErrorCode
+    ErrorCode,
+    TransactionResponse,
+    TransactionSource,
+    ProvisionedSource
 )
 from ..utils.model_utils import create_transaction_request, validate_required_fields
 from ..utils.request_client import RequestClient
@@ -218,33 +221,38 @@ class AdyenClient:
 
         return payload
 
-    def _transform_adyen_response(self, response_data: Dict[str, Any], request: TransactionRequest) -> Dict[str, Any]:
+    def _transform_adyen_response(self, response_data: Dict[str, Any], request: TransactionRequest) -> TransactionResponse:
         """Transform Adyen response to our standardized format."""
-        return {
-            "id": response_data.get("pspReference"),
-            "reference": response_data.get("merchantReference"),
-            "amount": {
-                "value": response_data.get("amount", {}).get("value"),
-                "currency": response_data.get("amount", {}).get("currency")
-            },
-            "status": {
-                "code": self._get_status_code(response_data.get("resultCode")),
-                "provider_code": response_data.get("resultCode")
-            },
-            "source": {
-                "type": request.source.type,
-                "id": request.source.id,
-                # checking both as recurringDetailReference is deprecated, although it still appears without storedPaymentMethodId
-                "provisioned": {
-                    "id": response_data.get("paymentMethod", {}).get("storedPaymentMethodId") or 
-                         response_data.get("additionalData", {}).get("recurring.recurringDetailReference")
-                } if (response_data.get("paymentMethod", {}).get("storedPaymentMethodId") or 
-                      response_data.get("additionalData", {}).get("recurring.recurringDetailReference")) else None
-            },
-            "networkTransactionId": response_data.get("additionalData", {}).get("networkTxReference"),
-            "full_provider_response": response_data,
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
+
+        transaction_response = TransactionResponse(
+            id=response_data.get("pspReference"),
+            reference=response_data.get("merchantReference"),
+            amount=Amount(
+                value=response_data.get("amount", {}).get("value"),
+                currency=response_data.get("amount", {}).get("currency")
+            ),
+            status=TransactionStatus(
+                code=self._get_status_code(response_data.get("resultCode")),
+                provider_code=response_data.get("resultCode")
+            ),
+            source=TransactionSource(
+                type=request.source.type,
+                id=request.source.id,
+            ),
+            networkTransactionId=response_data.get("additionalData", {}).get("networkTxReference"),
+            full_provider_response=response_data,
+            created_at=datetime.now(timezone.utc).isoformat()
+        )
+
+        # checking both as recurringDetailReference is deprecated, although it still appears without storedPaymentMethodId
+        stored_payment_id = response_data.get("paymentMethod", {}).get("storedPaymentMethodId")
+        recurring_ref = response_data.get("additionalData", {}).get("recurring.recurringDetailReference")
+        
+        if stored_payment_id or recurring_ref:
+            transaction_response.source.provisioned = ProvisionedSource(id=stored_payment_id or recurring_ref)
+
+
+        return transaction_response
 
     def _transform_error_response(self, response: requests.Response, response_data: Dict[str, Any]) -> ErrorResponse:
         """Transform error responses to our standardized format.
@@ -280,15 +288,12 @@ class AdyenClient:
         )
 
 
-    async def transaction(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def transaction(self, request_data: TransactionRequest) -> TransactionResponse:
         """Process a payment transaction through Adyen's API directly or via Basis Theory's proxy."""
         validate_required_fields(request_data)
 
-        # Convert the dictionary to our internal TransactionRequest model
-        request = create_transaction_request(request_data)
-
         # Transform to Adyen's format
-        payload = self._transform_to_adyen_payload(request)
+        payload = self._transform_to_adyen_payload(request_data)
 
         # Set up common headers
         headers = {
@@ -303,7 +308,7 @@ class AdyenClient:
                 method="POST",
                 headers=headers,
                 data=payload,
-                use_bt_proxy=request.source.type != SourceType.PROCESSOR_TOKEN
+                use_bt_proxy=request_data.source.type != SourceType.PROCESSOR_TOKEN
             )
 
             response_data = response.json()
@@ -313,7 +318,7 @@ class AdyenClient:
                 raise TransactionException(self._transform_error_response(response, response_data))
 
             # Transform the successful response to our format
-            return self._transform_adyen_response(response_data, request)
+            return self._transform_adyen_response(response_data, request_data)
 
         except requests.exceptions.HTTPError as e:
             try:

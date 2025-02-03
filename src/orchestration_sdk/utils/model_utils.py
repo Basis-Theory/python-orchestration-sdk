@@ -12,19 +12,19 @@ from ..models import (
 )
 
 
-def validate_required_fields(data: Dict[str, Any]) -> None:
+def validate_required_fields(data: TransactionRequest) -> None:
     """
     Validate required fields in a transaction request.
     
     Args:
-        data: Dictionary containing transaction request data
+        data: TransactionRequest containing transaction request data
         
     Raises:
         ValidationError: If required fields are missing
     """
-    if 'amount' not in data or 'value' not in data['amount']:
+    if not data.amount or not data.amount.value:
         raise ValidationError("amount.value is required")
-    if 'source' not in data or 'type' not in data['source'] or 'id' not in data['source']:
+    if not data.source or not data.source.type or not data.source.id:
         raise ValidationError("source.type and source.id are required")
 
 
