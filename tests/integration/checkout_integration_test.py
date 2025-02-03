@@ -16,7 +16,7 @@ from orchestration_sdk.models import (
     Source,
     Customer
 )
-from orchestration_sdk.exceptions import TransactionException, ValidationError
+from orchestration_sdk.exceptions import TransactionError, ValidationError
 
 @pytest.mark.asyncio
 async def test_errors():
@@ -119,8 +119,8 @@ async def test_errors():
 
         # Mock the session.request method to raise HTTPError
         with patch('requests.request', side_effect=mock_error) as mock_request:
-            # Make the transaction request and expect a TransactionException
-            with pytest.raises(TransactionException) as exc_info:
+            # Make the transaction request and expect a TransactionError
+            with pytest.raises(TransactionError) as exc_info:
                 await sdk.checkout.transaction(transaction_request)
 
             # Get the error response from the exception

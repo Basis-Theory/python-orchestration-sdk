@@ -35,7 +35,7 @@ from orchestration_sdk.models import (
     ErrorCategory,
     ErrorType
 )
-from orchestration_sdk.exceptions import TransactionException, ValidationError
+from orchestration_sdk.exceptions import TransactionError, ValidationError
 
 # Load environment variables from .env file
 load_dotenv()
@@ -332,8 +332,8 @@ async def test_error_expired_card():
 
     print(f"Transaction request: {transaction_request}")
 
-    # Make the transaction request and expect a TransactionException
-    with pytest.raises(TransactionException) as exc_info:
+    # Make the transaction request and expect a TransactionError
+    with pytest.raises(TransactionError) as exc_info:
         await sdk.checkout.transaction(transaction_request)
 
     # Get the error response from the exception
@@ -387,8 +387,8 @@ async def test_error_invalid_api_key():
 
     print(f"Transaction request: {transaction_request}")
 
-    # Make the transaction request and expect a TransactionException
-    with pytest.raises(TransactionException) as exc_info:
+    # Make the transaction request and expect a TransactionError
+    with pytest.raises(TransactionError) as exc_info:
         await sdk.checkout.transaction(transaction_request)
 
     # Get the error response from the exception
@@ -631,8 +631,8 @@ async def test_failed_refund():
         reference=f"{transaction_request.reference}_refund",
         amount=Amount(value=3738, currency='USD')
     )
-    # Process the refund and expect a TransactionException
-    with pytest.raises(TransactionException) as exc_info:
+    # Process the refund and expect a TransactionError
+    with pytest.raises(TransactionError) as exc_info:
         await sdk.checkout.refund_transaction(refund_request)
 
     # Get the error response from the exception
@@ -677,8 +677,8 @@ async def test_failed_refund_amount_exceeds_balance():
         reference=f"{transaction_request.reference}_refund",
         amount=Amount(value=200, currency='USD')
     )
-    # Process the refund and expect a TransactionException
-    with pytest.raises(TransactionException) as exc_info:
+    # Process the refund and expect a TransactionError
+    with pytest.raises(TransactionError) as exc_info:
         await sdk.checkout.refund_transaction(refund_request)
 
     # Get the error response from the exception

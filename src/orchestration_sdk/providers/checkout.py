@@ -28,7 +28,7 @@ from ..models import (
     TransactionSource,
     ProvisionedSource
 )
-from orchestration_sdk.exceptions import TransactionException
+from orchestration_sdk.exceptions import TransactionError
 from ..utils.model_utils import create_transaction_request, validate_required_fields
 from ..utils.request_client import RequestClient
 
@@ -380,7 +380,7 @@ class CheckoutClient:
             except:
                 error_data = None
 
-            raise TransactionException(self._transform_error_response_object(e.response, error_data))
+            raise TransactionError(self._transform_error_response_object(e.response, error_data))
 
         # Transform response to SDK format
         return self._transform_checkout_response(response.json(), request_data)
@@ -436,5 +436,5 @@ class CheckoutClient:
             except:
                 error_data = None
 
-            raise TransactionException(self._transform_error_response_object(e.response, error_data))
+            raise TransactionError(self._transform_error_response_object(e.response, error_data))
             

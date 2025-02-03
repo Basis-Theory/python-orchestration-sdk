@@ -16,7 +16,7 @@ from orchestration_sdk.models import (
     Customer,
     Address
 )
-from orchestration_sdk.exceptions import TransactionException
+from orchestration_sdk.exceptions import TransactionError
 
 @pytest.mark.asyncio
 async def test_errors():
@@ -124,8 +124,8 @@ async def test_errors():
 
         # Mock the session.request method
         with patch('requests.request', return_value=mock_response) as mock_request:
-            # For error cases, expect TransactionException with correct error code
-            with pytest.raises(TransactionException) as exc_info:
+            # For error cases, expect TransactionError with correct error code
+            with pytest.raises(TransactionError) as exc_info:
                 await sdk.adyen.transaction(transaction_request)
             
             error_response = exc_info.value.error_response

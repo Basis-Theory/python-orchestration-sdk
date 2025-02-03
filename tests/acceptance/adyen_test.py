@@ -26,7 +26,7 @@ from orchestration_sdk.models import (
     TransactionSource,
     ProvisionedSource
 )
-from orchestration_sdk.exceptions import TransactionException, ValidationError, BasisTheoryError
+from orchestration_sdk.exceptions import TransactionError, ValidationError, BasisTheoryError
 
 # Load environment variables from .env file
 load_dotenv()
@@ -314,11 +314,11 @@ async def test_error_expired_card():
     )
 
     print(f"Transaction request: {transaction_request}")
-    # Make the transaction request and catch TransactionException
+    # Make the transaction request and catch TransactionError
     try:
         response = await sdk.adyen.transaction(transaction_request)
         print(f"Response: {response}")
-    except TransactionException as e:
+    except TransactionError as e:
         response = e.error_response
         print(f"Error Response: {response}")
 
@@ -369,7 +369,7 @@ async def test_error_invalid_api_key():
     try:
         response = await sdk.adyen.transaction(transaction_request)
         print(f"Response: {response}")
-    except TransactionException as e:
+    except TransactionError as e:
         response = e.error_response
         print(f"BasisTheory Error Response: {response}")
 

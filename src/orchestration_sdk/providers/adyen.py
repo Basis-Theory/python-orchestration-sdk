@@ -26,7 +26,7 @@ from ..models import (
 )
 from ..utils.model_utils import create_transaction_request, validate_required_fields
 from ..utils.request_client import RequestClient
-from ..exceptions import TransactionException
+from ..exceptions import TransactionError
 
 
 RECURRING_TYPE_MAPPING = {
@@ -322,7 +322,7 @@ class AdyenClient:
 
             # Check if it's an error response (non-200 status code or Adyen error)
             if not response.ok or response_data.get("resultCode") in ["Refused", "Error", "Cancelled"]:
-                raise TransactionException(self._transform_error_response(response, response_data))
+                raise TransactionError(self._transform_error_response(response, response_data))
 
             # Transform the successful response to our format
             return self._transform_adyen_response(response_data, request_data)
@@ -333,7 +333,7 @@ class AdyenClient:
             except:
                 error_data = None
 
-            raise TransactionException(self._transform_error_response(e.response, error_data))
+            raise TransactionError(self._transform_error_response(e.response, error_data))
 
 
     async def refund_transaction(self, refund_request: RefundRequest) -> RefundResponse:
@@ -401,5 +401,5 @@ class AdyenClient:
             except:
                 error_data = None
 
-            raise TransactionException(self._transform_error_response(e.response, error_data))
+            raise TransactionError(self._transform_error_response(e.response, error_data))
 

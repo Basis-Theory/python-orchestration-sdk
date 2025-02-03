@@ -1,6 +1,6 @@
 from orchestration_sdk.models import ErrorResponse
 
-class TransactionException(Exception):
+class TransactionError(Exception):
     error_response: ErrorResponse
     def __init__(self, error_response: 'ErrorResponse'):
         self.error_response = error_response
