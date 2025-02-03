@@ -290,26 +290,26 @@ class CheckoutClient:
     def _transform_checkout_response(self, response_data: Dict[str, Any], request: TransactionRequest) -> TransactionResponse:
         """Transform Checkout.com response to our standardized format."""
         return TransactionResponse(
-            id=response_data.get("id"),
-            reference=response_data.get("reference"),
+            id=str(response_data.get("id")),
+            reference=str(response_data.get("reference")),
             amount=Amount(
-                value=response_data.get("amount"),
-                currency=response_data.get("currency")
+                value=int(response_data.get("amount")),
+                currency=str(response_data.get("currency"))
             ),
             status=TransactionStatus(
                 code=self._get_status_code(response_data.get("status")),
-                provider_code=response_data.get("status")
+                provider_code=str(response_data.get("status"))
             ),
             source=TransactionSource(
                 type=request.source.type,
                 id=request.source.id,
                 provisioned=ProvisionedSource(
-                    id=response_data.get("source", {}).get("id")
+                    id=str(response_data.get("source", {}).get("id"))
                 ) if response_data.get("source", {}).get("id") else None
             ),
             full_provider_response=response_data,
-            created_at=datetime.fromisoformat(response_data["processed_on"].split(".")[0] + "+00:00").isoformat("T", "milliseconds") if response_data.get("processed_on") else None,
-            network_transaction_id=response_data.get("processing", {}).get("acquirer_transaction_id")
+            created_at=datetime.fromisoformat(response_data["processed_on"].split(".")[0] + "+00:00") if response_data.get("processed_on") else None,
+            network_transaction_id=str(response_data.get("processing", {}).get("acquirer_transaction_id"))
         )
 
     def _get_error_code(self, error: ErrorType) -> Dict[str, Any]:

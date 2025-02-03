@@ -232,23 +232,23 @@ class AdyenClient:
     def _transform_adyen_response(self, response_data: Dict[str, Any], request: TransactionRequest) -> TransactionResponse:
         """Transform Adyen response to our standardized format."""
         transaction_response = TransactionResponse(
-            id=response_data.get("pspReference"),
-            reference=response_data.get("merchantReference"),
+            id=str(response_data.get("pspReference")),
+            reference=str(response_data.get("merchantReference")),
             amount=Amount(
-                value=response_data.get("amount", {}).get("value"),
-                currency=response_data.get("amount", {}).get("currency")
+                value=int(response_data.get("amount", {}).get("value")),
+                currency=str(response_data.get("amount", {}).get("currency"))
             ),
             status=TransactionStatus(
                 code=self._get_status_code(response_data.get("resultCode")),
-                provider_code=response_data.get("resultCode")
+                provider_code=str(response_data.get("resultCode"))
             ),
             source=TransactionSource(
                 type=request.source.type,
                 id=request.source.id,
             ),
-            network_transaction_id=response_data.get("additionalData", {}).get("networkTxReference"),
+            network_transaction_id=str(response_data.get("additionalData", {}).get("networkTxReference")),
             full_provider_response=response_data,
-            created_at=datetime.now(timezone.utc).isoformat()
+            created_at=datetime.now(timezone.utc)
         )
 
         # checking both as recurringDetailReference is deprecated, although it still appears without storedPaymentMethodId

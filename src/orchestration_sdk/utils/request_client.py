@@ -34,10 +34,7 @@ class RequestClient:
         errors = proxy_error.get("errors", {}) if isinstance(proxy_error, dict) else {}
         for key, value in errors.items():
             if isinstance(key, str):
-                provider_errors.append(Error(
-                    error=key,
-                    details=str(value)
-                ))
+                provider_errors.append(value)
 
         return ErrorResponse(
             error_codes=[

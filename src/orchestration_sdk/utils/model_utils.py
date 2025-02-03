@@ -10,6 +10,7 @@ from ..models import (
     ThreeDS,
     RecurringType
 )
+from ..exceptions import ValidationError
 
 
 def validate_required_fields(data: TransactionRequest) -> None:

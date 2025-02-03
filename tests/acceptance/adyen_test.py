@@ -154,16 +154,6 @@ async def test_storing_card_on_file():
     assert isinstance(response.full_provider_response, dict)
     
     assert response.created_at is not None
-    # Validate created_at is a valid datetime string
-    try:
-        # Remove any duplicate timezone offset
-        created_at = response.created_at
-        if '+00:00+00:00' in created_at:
-            created_at = created_at.replace('+00:00+00:00', '+00:00')
-        print(f"Created at: {created_at}")
-        datetime.fromisoformat(created_at)
-    except ValueError:
-        pytest.fail("created_at is not a valid ISO datetime string")
 
     # Validate network_transaction_id
     assert response.network_transaction_id is not None

@@ -137,8 +137,7 @@ async def test_storing_card_on_file():
     )
 
     # Make the transaction request
-    response: TransactionResponse = await sdk.checkout.transaction(transaction_request)
-    print(f"Response: {response}")
+    response = await sdk.checkout.transaction(transaction_request)
 
     # Validate response structure
     assert response.id is not None
@@ -170,11 +169,6 @@ async def test_storing_card_on_file():
     assert response.full_provider_response is not None
     
     assert response.created_at is not None
-    # Optionally validate created_at is a valid datetime string
-    try:
-        datetime.fromisoformat(response.created_at.replace('Z', '+00:00'))
-    except ValueError:
-        pytest.fail("created_at is not a valid ISO datetime string")
 
 
 @pytest.mark.asyncio
@@ -203,8 +197,7 @@ async def test_not_storing_card_on_file():
     )
 
     # Make the transaction request
-    response: TransactionResponse = await sdk.checkout.transaction(transaction_request)
-    print(f"Response: {json.dumps(response.full_provider_response, indent=2)}")
+    response = await sdk.checkout.transaction(transaction_request)
 
     # Validate response structure
     assert response.id is not None
@@ -274,8 +267,7 @@ async def test_with_three_ds():
     )
 
     # Make the transaction request
-    response: TransactionResponse = await sdk.checkout.transaction(transaction_request)
-    print(f"Response: {json.dumps(response.full_provider_response, indent=2)}")
+    response = await sdk.checkout.transaction(transaction_request)
 
     # Validate response structure
     assert response.id is not None
@@ -445,8 +437,7 @@ async def test_token_intents_charge_not_storing_card_on_file():
     )
 
     # Make the transaction request
-    response: TransactionResponse = await sdk.checkout.transaction(transaction_request)
-    print(f"Response: {response.full_provider_response}")
+    response = await sdk.checkout.transaction(transaction_request)
 
     # Validate response structure
     assert response.id is not None
@@ -511,7 +502,7 @@ async def test_processor_token_charge_not_storing_card_on_file():
     )
 
     # Make the transaction request
-    response: TransactionResponse = await sdk.checkout.transaction(transaction_request)
+    response = await sdk.checkout.transaction(transaction_request)
 
     token_id = response.source.provisioned.id
 
@@ -531,8 +522,7 @@ async def test_processor_token_charge_not_storing_card_on_file():
     )
 
     # Make the transaction request
-    response: TransactionResponse = await sdk.checkout.transaction(transaction_request)
-    print(f"Response: {response}")
+    response = await sdk.checkout.transaction(transaction_request)
 
     # Validate response structure
     assert response.id is not None
@@ -592,7 +582,7 @@ async def test_partial_refund():
     )
 
     # Make the transaction request
-    response: TransactionResponse = await sdk.checkout.transaction(transaction_request)
+    response = await sdk.checkout.transaction(transaction_request)
     
     refund_request = RefundRequest(
         original_transaction_id=response.id,
@@ -634,7 +624,7 @@ async def test_failed_refund():
     )
 
     # Make the transaction request
-    response: TransactionResponse = await sdk.checkout.transaction(transaction_request)
+    response = await sdk.checkout.transaction(transaction_request)
     
     refund_request = RefundRequest(
         original_transaction_id=response.id,
@@ -680,7 +670,7 @@ async def test_failed_refund_amount_exceeds_balance():
     )
 
     # Make the transaction request
-    response: TransactionResponse = await sdk.checkout.transaction(transaction_request)
+    response = await sdk.checkout.transaction(transaction_request)
     
     refund_request = RefundRequest(
         original_transaction_id=response.id,
