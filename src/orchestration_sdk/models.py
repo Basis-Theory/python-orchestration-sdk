@@ -78,7 +78,7 @@ class ErrorType(Enum):
     UNAUTHORIZED = ("unauthorized", ErrorCategory.OTHER)
     CONFIGURATION_ERROR = ("configuration_error", ErrorCategory.OTHER)
     REFUND_FAILED = ("refund_failed", ErrorCategory.PROCESSING_ERROR)
-    REFUND_REFUND_AMOUNT_EXCEEDS_BALANCE = ("refund_amount_exceeds_balance", ErrorCategory.PROCESSING_ERROR)
+    REFUND_AMOUNT_EXCEEDS_BALANCE = ("refund_amount_exceeds_balance", ErrorCategory.PROCESSING_ERROR)
     REFUND_DECLINED = ("refund_declined", ErrorCategory.PROCESSING_ERROR)
     BT_UNAUTHENTICATED = ("unauthenticated", ErrorCategory.BASIS_THEORY_ERROR)
     BT_UNAUTHORIZED = ("unauthorized", ErrorCategory.BASIS_THEORY_ERROR)

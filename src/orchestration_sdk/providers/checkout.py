@@ -165,7 +165,7 @@ ERROR_CODE_MAPPING = {
     "token_required": ErrorType.OTHER,
     "token_type_required": ErrorType.OTHER,
     "void_amount_invalid": ErrorType.OTHER,
-    "refund_amount_exceeds_balance": ErrorType.REFUND_REFUND_AMOUNT_EXCEEDS_BALANCE,
+    "refund_amount_exceeds_balance": ErrorType.REFUND_AMOUNT_EXCEEDS_BALANCE,
     "refund_authorization_declined": ErrorType.REFUND_DECLINED
 }
 
