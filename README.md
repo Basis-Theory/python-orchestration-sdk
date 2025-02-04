@@ -37,22 +37,22 @@ sdk = PaymentOrchestrationSDK.init({
 })
 
 # Create a transaction request
-transaction_request = {
-    'reference': 'unique-transaction-reference',
-    'type': RecurringType.ONE_TIME,
-    'amount': {
-        'value': 1000,  # Amount in cents
-        'currency': 'USD'
-    },
-    'source': {
-        'type': 'basis_theory_token',
-        'id': 'YOUR_BASIS_THEORY_TOKEN_ID',
-        'store_with_provider': False
-    },
-    'customer': {
-        'reference': 'customer-reference',
-    }
-}
+transaction_request = TransactionRequest(
+    reference='unique-transaction-reference',
+    type=RecurringType.ONE_TIME,
+    amount=Amount(
+        value=1000,  # Amount in cents
+        currency='USD'
+    ),
+    source=Source(
+        type=SourceType.BASIS_THEORY_TOKEN,
+        id='YOUR_BASIS_THEORY_TOKEN_ID',
+        store_with_provider=False
+    ),
+    customer=Customer(
+        reference='customer-reference'
+    )
+)
 
 # Process the transaction with your chosen provider
 response = await sdk.adyen.transaction(transaction_request)  # Use sdk.<provider>.transaction()
