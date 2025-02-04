@@ -14,13 +14,20 @@ class TransactionStatusCode(str, Enum):
     CHALLENGE_SHOPPER = "ChallengeShopper"
     RECEIVED = "Received"
     PARTIALLY_AUTHORIZED = "PartiallyAuthorised"
-
+    REFUNDED = "Refunded"
 
 class RecurringType(str, Enum):
     ONE_TIME     = "ONE_TIME"
     CARD_ON_FILE = "CARD_ON_FILE"
     SUBSCRIPTION = "SUBSCRIPTION"
     UNSCHEDULED = "UNSCHEDULED"
+
+class RefundReason(str, Enum):
+    FRAUD = "FRAUD"
+    CUSTOMER_REQUEST = "CUSTOMER_REQUEST"
+    RETURN = "RETURN"
+    DUPLICATE = "DUPLICATE"
+    OTHER = "OTHER"
 
 
 class SourceType(str, Enum):
@@ -39,7 +46,7 @@ class ErrorCategory(str, Enum):
     OTHER = "Other"
 
 
-class ErrorType(Enum):
+class ErrorType(Enum):  
     """Enum for error types."""
     REFUSED = ("refused", ErrorCategory.PROCESSING_ERROR)
     REFERRAL = ("referral", ErrorCategory.PROCESSING_ERROR)
@@ -70,6 +77,9 @@ class ErrorType(Enum):
     INVALID_API_KEY = ("invalid_api_key", ErrorCategory.OTHER)
     UNAUTHORIZED = ("unauthorized", ErrorCategory.OTHER)
     CONFIGURATION_ERROR = ("configuration_error", ErrorCategory.OTHER)
+    REFUND_FAILED = ("refund_failed", ErrorCategory.PROCESSING_ERROR)
+    REFUND_AMOUNT_EXCEEDS_BALANCE = ("refund_amount_exceeds_balance", ErrorCategory.PROCESSING_ERROR)
+    REFUND_DECLINED = ("refund_declined", ErrorCategory.PROCESSING_ERROR)
     BT_UNAUTHENTICATED = ("unauthenticated", ErrorCategory.BASIS_THEORY_ERROR)
     BT_UNAUTHORIZED = ("unauthorized", ErrorCategory.BASIS_THEORY_ERROR)
     BT_REQUEST_ERROR = ("request_error", ErrorCategory.BASIS_THEORY_ERROR)
@@ -141,6 +151,12 @@ class TransactionRequest:
     override_provider_properties: Optional[Dict[str, Any]] = None
     metadata: Optional[Dict[str, str]] = None
 
+@dataclass
+class RefundRequest:
+    original_transaction_id: str
+    reference: str
+    amount: Amount
+    reason: Optional[RefundReason] = None
 
 # Response Models
 @dataclass
@@ -173,13 +189,22 @@ class TransactionResponse:
 
 
 @dataclass
+class RefundResponse:
+    id: str
+    reference: str
+    amount: Amount
+    status: TransactionStatus
+    full_provider_response: Dict[str, Any]
+    created_at: datetime
+    refunded_transaction_id: Optional[str] = None
+
+@dataclass
 class ErrorCode:
     category: str
     code: str
-
 
 @dataclass
 class ErrorResponse:
     error_codes: List[ErrorCode]
     provider_errors: List[str]
-    full_provider_response: Dict[str, Any] 
+    full_provider_response: Dict[str, Any]

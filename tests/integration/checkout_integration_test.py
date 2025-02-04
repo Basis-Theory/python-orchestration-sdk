@@ -10,8 +10,13 @@ from orchestration_sdk.models import (
     RecurringType,
     SourceType,
     ErrorCategory,
-    ErrorType
+    ErrorType,
+    TransactionRequest,
+    Amount,
+    Source,
+    Customer
 )
+from orchestration_sdk.exceptions import TransactionError, ValidationError
 
 @pytest.mark.asyncio
 async def test_errors():
@@ -95,49 +100,49 @@ async def test_errors():
         mock_error.response = mock_response
 
         # Create a test transaction request
-        transaction_request = {
-            'reference': str(uuid.uuid4()),
-            'type': RecurringType.ONE_TIME,
-            'amount': {
-                'value': 1,
-                'currency': 'USD'
-            },
-            'source': {
-                'type': SourceType.PROCESSOR_TOKEN,
-                'id': 'test_token_id',
-                'store_with_provider': False
-            },
-            'customer': {
-                'reference': str(uuid.uuid4())
-            }
-        }
+        transaction_request = TransactionRequest(
+            reference=str(uuid.uuid4()),
+            type=RecurringType.ONE_TIME,
+            amount=Amount(
+                value=1,
+                currency='USD'
+            ),
+            source=Source(
+                type=SourceType.PROCESSOR_TOKEN,
+                id='test_token_id',
+                store_with_provider=False
+            ),
+            customer=Customer(
+                reference=str(uuid.uuid4())
+            )
+        )
 
         # Mock the session.request method to raise HTTPError
         with patch('requests.request', side_effect=mock_error) as mock_request:
-            # Make the transaction request
-            response = await sdk.checkout.transaction(transaction_request)
+            # Make the transaction request and expect a TransactionError
+            with pytest.raises(TransactionError) as exc_info:
+                await sdk.checkout.transaction(transaction_request)
+
+            # Get the error response from the exception
+            error_response = exc_info.value.error_response
 
             # Verify the request was made with correct parameters
             mock_request.assert_called_once()
 
             # Validate error response structure
-            assert isinstance(response, dict)
-            assert 'error_codes' in response
-            assert isinstance(response['error_codes'], list)
-            assert len(response['error_codes']) == 1
+            assert isinstance(error_response.error_codes, list)
+            assert len(error_response.error_codes) == 1
 
             # Verify exact error code values
-            error = response['error_codes'][0]
-            assert error['code'] == test_case["expected_error"].code
+            error = error_response.error_codes[0]
+            assert error.code == test_case["expected_error"].code
 
             # Verify provider errors
-            assert 'provider_errors' in response
-            assert isinstance(response['provider_errors'], list)
-            assert len(response['provider_errors']) == len(test_case["error_codes"])
-            assert response['provider_errors'] == test_case["error_codes"]
+            assert isinstance(error_response.provider_errors, list)
+            assert len(error_response.provider_errors) == len(test_case["error_codes"])
+            assert error_response.provider_errors == test_case["error_codes"]
 
             # Verify full provider response
-            assert 'full_provider_response' in response
-            assert isinstance(response['full_provider_response'], dict)
-            assert response['full_provider_response']['error_type'] == test_case["error_type"]
-            assert response['full_provider_response']['error_codes'] == test_case["error_codes"]
+            assert isinstance(error_response.full_provider_response, dict)
+            assert error_response.full_provider_response['error_type'] == test_case["error_type"]
+            assert error_response.full_provider_response['error_codes'] == test_case["error_codes"]

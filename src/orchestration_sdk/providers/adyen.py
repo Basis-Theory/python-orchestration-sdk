@@ -14,11 +14,19 @@ from ..models import (
     RecurringType,
     TransactionStatusCode,
     ErrorType,
-    ErrorCategory
+    ErrorCategory,
+    RefundRequest,
+    RefundResponse,
+    TransactionStatus,
+    ErrorResponse,
+    ErrorCode,
+    TransactionResponse,
+    TransactionSource,
+    ProvisionedSource
 )
-from ..exceptions import ValidationError, ProcessingError
 from ..utils.model_utils import create_transaction_request, validate_required_fields
 from ..utils.request_client import RequestClient
+from ..exceptions import TransactionError
 
 
 RECURRING_TYPE_MAPPING = {
@@ -133,8 +141,6 @@ class AdyenClient:
         
         if request.source.type == SourceType.PROCESSOR_TOKEN:
             payment_method["storedPaymentMethodId"] = request.source.id
-            if request.source.holder_name:
-                payment_method["holderName"] = request.source.holder_name
         elif request.source.type in [SourceType.BASIS_THEORY_TOKEN, SourceType.BASIS_THEORY_TOKEN_INTENT]:
             # Add card data with Basis Theory expressions
             token_prefix = "token_intent" if request.source.type == SourceType.BASIS_THEORY_TOKEN_INTENT else "token"
@@ -143,11 +149,11 @@ class AdyenClient:
                 "expiryMonth": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.expiration_month'}}}}",
                 "expiryYear": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.expiration_year'}}}}",
                 "cvc": f"{{{{ {token_prefix}: {request.source.id} | json: '$.data.cvc'}}}}"
-            })
-            if request.source.holder_name:
+            })      
+        if request.source.holder_name:
                 payment_method["holderName"] = request.source.holder_name
 
-        if request. previous_network_transaction_id:
+        if request.previous_network_transaction_id:
             payment_method["networkPaymentReference"] = request. previous_network_transaction_id
 
         payload["paymentMethod"] = payment_method
@@ -223,34 +229,39 @@ class AdyenClient:
 
         return payload
 
-    def _transform_adyen_response(self, response_data: Dict[str, Any], request: TransactionRequest) -> Dict[str, Any]:
+    def _transform_adyen_response(self, response_data: Dict[str, Any], request: TransactionRequest) -> TransactionResponse:
         """Transform Adyen response to our standardized format."""
-        return {
-            "id": response_data.get("pspReference"),
-            "reference": response_data.get("merchantReference"),
-            "amount": {
-                "value": response_data.get("amount", {}).get("value"),
-                "currency": response_data.get("amount", {}).get("currency")
-            },
-            "status": {
-                "code": self._get_status_code(response_data.get("resultCode")),
-                "provider_code": response_data.get("resultCode")
-            },
-            "source": {
-                "type": request.source.type,
-                "id": request.source.id,
-                "provisioned": {
-                    "id": response_data.get("paymentMethod", {}).get("storedPaymentMethodId") or 
-                         response_data.get("additionalData", {}).get("recurring.recurringDetailReference")
-                } if (response_data.get("paymentMethod", {}).get("storedPaymentMethodId") or 
-                      response_data.get("additionalData", {}).get("recurring.recurringDetailReference")) else None
-            },
-            "network_transaction_id": response_data.get("additionalData", {}).get("networkTxReference"),
-            "full_provider_response": response_data,
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
+        transaction_response = TransactionResponse(
+            id=str(response_data.get("pspReference")),
+            reference=str(response_data.get("merchantReference")),
+            amount=Amount(
+                value=int(response_data.get("amount", {}).get("value")),
+                currency=str(response_data.get("amount", {}).get("currency"))
+            ),
+            status=TransactionStatus(
+                code=self._get_status_code(response_data.get("resultCode")),
+                provider_code=str(response_data.get("resultCode"))
+            ),
+            source=TransactionSource(
+                type=request.source.type,
+                id=request.source.id,
+            ),
+            network_transaction_id=str(response_data.get("additionalData", {}).get("networkTxReference")),
+            full_provider_response=response_data,
+            created_at=datetime.now(timezone.utc)
+        )
 
-    def _transform_error_response(self, response: requests.Response, response_data: Dict[str, Any]) -> Dict[str, Any]:
+        # checking both as recurringDetailReference is deprecated, although it still appears without storedPaymentMethodId
+        stored_payment_id = response_data.get("paymentMethod", {}).get("storedPaymentMethodId")
+        recurring_ref = response_data.get("additionalData", {}).get("recurring.recurringDetailReference")
+        
+        if stored_payment_id or recurring_ref:
+            transaction_response.source.provisioned = ProvisionedSource(id=stored_payment_id or recurring_ref)
+
+
+        return transaction_response
+
+    def _transform_error_response(self, response: requests.Response, response_data: Dict[str, Any]) -> ErrorResponse:
         """Transform error responses to our standardized format.
         
         Args:
@@ -272,26 +283,24 @@ class AdyenClient:
         else:
             error_type = ErrorType.OTHER
 
-        return {
-            "error_codes": [
-                {
-                    "category": error_type.category,
-                    "code": error_type.code
-                }
+        return ErrorResponse(
+            error_codes=[
+                ErrorCode(
+                    category=error_type.category,
+                    code=error_type.code
+                )
             ],
-            "provider_errors": [response_data.get("refusalReason") or response_data.get("message", "")],
-            "full_provider_response": response_data
-        }
+            provider_errors=[response_data.get("refusalReason") or response_data.get("message", "")],
+            full_provider_response=response_data
+        )
 
-    async def transaction(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
+
+    async def transaction(self, request_data: TransactionRequest) -> TransactionResponse:
         """Process a payment transaction through Adyen's API directly or via Basis Theory's proxy."""
         validate_required_fields(request_data)
 
-        # Convert the dictionary to our internal TransactionRequest model
-        request = create_transaction_request(request_data)
-
         # Transform to Adyen's format
-        payload = self._transform_to_adyen_payload(request)
+        payload = self._transform_to_adyen_payload(request_data)
 
         # Set up common headers
         headers = {
@@ -306,20 +315,91 @@ class AdyenClient:
                 method="POST",
                 headers=headers,
                 data=payload,
-                use_bt_proxy=request.source.type != SourceType.PROCESSOR_TOKEN
+                use_bt_proxy=request_data.source.type != SourceType.PROCESSOR_TOKEN
             )
+
+            response_data = response.json()
+
+            # Check if it's an error response (non-200 status code or Adyen error)
+            if not response.ok or response_data.get("resultCode") in ["Refused", "Error", "Cancelled"]:
+                raise TransactionError(self._transform_error_response(response, response_data))
+
+            # Transform the successful response to our format
+            return self._transform_adyen_response(response_data, request_data)
+
         except requests.exceptions.HTTPError as e:
-            # Check if this is a BT error
-            if hasattr(e, 'bt_error_response'):
-                return e.bt_error_response
-            # Handle HTTP errors (like 401, 403, etc.)
-            return self._transform_error_response(e.response, e.response.json())
+            try:
+                error_data = e.response.json()
+            except:
+                error_data = None
 
-        response_data = response.json()
+            raise TransactionError(self._transform_error_response(e.response, error_data))
 
-        # Check if it's an error response (non-200 status code or Adyen error)
-        if not response.ok or response_data.get("resultCode") in ["Refused", "Error", "Cancelled"]:
-            return self._transform_error_response(response, response_data)
 
-        # Transform the successful response to our format
-        return self._transform_adyen_response(response_data, request)
+    async def refund_transaction(self, refund_request: RefundRequest) -> RefundResponse:
+        """
+        Refund a payment transaction through Adyen's API.
+        
+        Args:
+            refund_request (RefundRequest): The refund request details
+            
+        Returns:
+            RefundResponse: The refund response
+        """
+        # Set up headers
+        headers = {
+            "X-API-Key": self.api_key,
+            "Content-Type": "application/json"
+        }
+
+        # Prepare the refund payload
+        payload = {
+            "merchantAccount": self.merchant_account,
+            "reference": refund_request.reference,
+            "amount": {
+                "value": refund_request.amount.value,
+                "currency": refund_request.amount.currency
+            }
+        }
+
+        # Add refund reason if provided
+        if refund_request.reason:
+            payload["merchantRefundReason"] = refund_request.reason
+
+        try:
+            # Make request to Adyen
+            response = self.request_client.request(
+                url=f"{self.base_url}/payments/{refund_request.original_transaction_id}/refunds",
+                method="POST",
+                headers=headers,
+                data=payload,
+                use_bt_proxy=False  # Refunds don't need BT proxy
+            )
+
+            response_data = response.json()
+            
+            # Transform the response to a standardized format
+            return RefundResponse(
+                id=response_data.get('pspReference'),
+                reference=response_data.get('reference'),
+                amount=Amount(
+                    value=response_data.get('amount', {}).get('value'),
+                    currency=response_data.get('amount', {}).get('currency')
+                ),
+                status=TransactionStatus(
+                    code=TransactionStatusCode.RECEIVED,
+                    provider_code=response_data.get('status')
+                ),
+                refunded_transaction_id=response_data.get('paymentPspReference'),
+                full_provider_response=response_data,
+                created_at=datetime.now(timezone.utc)
+            )
+
+        except requests.exceptions.HTTPError as e:
+            try:
+                error_data = e.response.json()
+            except:
+                error_data = None
+
+            raise TransactionError(self._transform_error_response(e.response, error_data))
+

@@ -1,8 +1,8 @@
 from typing import Dict, Any, Optional, Union, List, cast
 import requests
 from requests.models import Response
-from ..models import ErrorType
-
+from ..models import ErrorType, ErrorCode, ErrorResponse
+from orchestration_sdk.exceptions import BasisTheoryError
 
 class RequestClient:
     def __init__(self, bt_api_key: str) -> None:
@@ -13,7 +13,7 @@ class RequestClient:
         bt_status = response.headers.get('BT-PROXY-DESTINATION-STATUS')
         return bt_status is None or str(response.status_code) != bt_status
 
-    def _transform_bt_error(self, response: Response) -> Dict[str, Any]:
+    def _transform_bt_error(self, response: Response) -> ErrorResponse:
         """Transform BasisTheory error response to standardized format."""
         error_type = ErrorType.BT_UNEXPECTED  # Default error type
         
@@ -29,27 +29,23 @@ class RequestClient:
         except:
             response_data = {"message": response.text or "Unknown error"}
 
-        provider_errors: List[Dict[str, str]] = []
+        provider_errors: List[str] = []
         proxy_error = response_data.get("proxy_error", {})
         errors = proxy_error.get("errors", {}) if isinstance(proxy_error, dict) else {}
-        
         for key, value in errors.items():
             if isinstance(key, str):
-                provider_errors.append({
-                    "error": key,
-                    "details": str(value)
-                })
+                provider_errors.append(value)
 
-        return {
-            "error_codes": [
-                {
-                    "category": error_type.category,
-                    "code": error_type.code
-                }
+        return ErrorResponse(
+            error_codes=[
+                ErrorCode(
+                    category=error_type.category,
+                    code=error_type.code
+                )
             ],
-            "provider_errors": provider_errors,
-            "full_provider_response": response_data
-        }
+            provider_errors=provider_errors,
+            full_provider_response=response_data
+        )
 
     def request(
         self,
@@ -84,10 +80,8 @@ class RequestClient:
         # Check for BT errors first
         if use_bt_proxy and not response.ok and self._is_bt_error(response):
             error_response = self._transform_bt_error(response)
-            # Raise an HTTPError with the transformed error response
-            error = requests.exceptions.HTTPError(response=response)
-            setattr(error, 'bt_error_response', error_response)
-            raise error
+    
+            raise BasisTheoryError(error_response, response.status_code)
 
         # Raise for other HTTP errors
         response.raise_for_status()
